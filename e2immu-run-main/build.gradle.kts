@@ -43,15 +43,27 @@ dependencies {
     implementation("org.e2immu:e2immu-internal-graph:some.version")
     implementation("org.e2immu:e2immu-cst-api:some.version")
     implementation("org.e2immu:e2immu-cst-impl:some.version")
+    implementation("org.e2immu:e2immu-cst-io:some.version")
+    implementation("org.e2immu:e2immu-cst-print:some.version")
+    implementation("org.e2immu:e2immu-java-parser:some.version")
+    implementation("org.e2immu:e2immu-java-bytecode:some.version")
     implementation("org.e2immu:e2immu-inspection-api:some.version")
     implementation("org.e2immu:e2immu-inspection-resource:some.version")
+    implementation("org.e2immu:e2immu-inspection-integration:some.version")
     implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
     implementation("org.e2immu:e2immu-modification-prepwork:some.version")
-
     implementation("org.e2immu:e2immu-run-config:some.version")
 
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("commons-cli:commons-cli:1.4")
+
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
+    testImplementation("ch.qos.logback:logback-classic:1.5.6")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 

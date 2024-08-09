@@ -56,6 +56,8 @@ public class Main {
     public static final String ANNOTATED_API_PACKAGES = "read-annotated-api-packages";
     public static final String WRITE_ANALYZED_ANNOTATED_API_DIR = "write-analyzed-annotated-api-dir";
     public static final String WRITE_ANNOTATED_API_DIR = "write-annotated-api-dir";
+    public static final String WRITE_ANNOTATED_API_TARGET_PACKAGE = "write-annotated-api-target-package";
+    public static final String WRITE_ANNOTATED_API_PACKAGES = "write-annotated-api-packages";
 
     public static final String COMMA = ",";
 
@@ -76,8 +78,8 @@ public class Main {
             int exitValue = execute(args);
             if (exitValue != EXIT_OK) {
                 LOGGER.error(exitMessage(exitValue));
+                System.exit(exitValue);
             }
-            System.exit(exitValue);
         } catch (ParseException parseException) {
             LOGGER.error("Parse exception: ", parseException);
             System.exit(EXIT_INTERNAL_EXCEPTION);
@@ -276,7 +278,26 @@ public class Main {
         return builder.build();
     }
 
-    /* ******* input configuration ******** */
+    /* ******* Annotated API configuration ******** */
+
+    /*
+    Use cases.
+    1: normal reading of AAAPI files: specify ANALYZED_ANNOTATED_API directories
+         = normal parsing, with AAPI files for libraries and partial results for sources.
+         When in incremental mode, the AAAPI files containing source packages may be updated.
+         The first directory is chosen to write new AAAPI files.
+    2: compiling AAPI -> AAAPI: write packages ANNOTATED_API_PACKAGES from the source path
+         in to WRITE_ANALYZED_ANNOTATED_API_DIR. The source path may contain AAPI classes, and regular classes.
+         = running the shallow analyzer to prepare libraries for use by e2immu
+    3: writing AAPI skeletons: use WRITE_ANNOTATED_API_DIR as the target directory for the skeletons.
+        WRITE_ANNOTATED_API_PACKAGES contains the classes for which a skeleton will be generated.
+        WRITE_ANNOTATED_API_TARGET_PACKAGE contains the package to write to.
+         = running the composer
+
+
+    Apply use case 3 to generate the AAPI files for a library.
+    Edit them, then apply use case 2 to compile the edited AAPI files into AAAPI files for use in a project.
+    */
 
     private static void addAnnotatedAPIConfigurationOptions(Options options) {
         options.addOption(Option.builder("s").longOpt(ANALYZED_ANNOTATED_API).hasArg().argName("DIRS")
@@ -284,7 +305,7 @@ public class Main {
                       " Use the Java path separator '" + File.pathSeparator + "' to separate directories, " +
                       "or use this options multiple times.").build());
 
-        options.addOption(Option.builder().longOpt(ANNOTATED_API_PACKAGES).hasArg().argName("DIRS")
+        options.addOption(Option.builder().longOpt(ANNOTATED_API_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Designate these packages from the source input as packages containing Annotated " +
                       "API sources.").build());
 
@@ -292,7 +313,14 @@ public class Main {
                 .desc("Where to write analyzed Annotated API files.").build());
 
         options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_DIR).hasArg().argName("DIR")
-                .desc("Where to write Annotated API source files, extracted from sources.").build());
+                .desc("Where to write Annotated API skeleton files, extracted from sources.").build());
+
+        options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_TARGET_PACKAGE).hasArg().argName("PACKAGE")
+                .desc("Which package to write the Annotated API skeleton files to").build());
+
+        options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_PACKAGES).hasArg().argName("PACKAGES")
+                .desc("Create AAPI skeletons from the following packages of the source.").build());
+
     }
 
     private static AnnotatedAPIConfiguration annotatedAPIConfiguration(Map<String, String> kvMap) {
@@ -303,6 +331,9 @@ public class Main {
 
         setStringProperty(kvMap, WRITE_ANALYZED_ANNOTATED_API_DIR, builder::setAnalyzedAnnotatedApiTargetDirectory);
         setStringProperty(kvMap, WRITE_ANNOTATED_API_DIR, builder::setAnnotatedApiTargetDirectory);
+        setStringProperty(kvMap, WRITE_ANNOTATED_API_TARGET_PACKAGE, builder::setAnnotatedApiTargetPackage);
+
+        setSplitStringProperty(kvMap, File.pathSeparator, WRITE_ANNOTATED_API_PACKAGES, builder::addAnnotatedApiPackages);
 
         return builder.build();
     }
