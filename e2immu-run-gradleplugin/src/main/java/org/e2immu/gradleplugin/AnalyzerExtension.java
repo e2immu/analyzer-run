@@ -16,9 +16,9 @@ package org.e2immu.gradleplugin;
 
 import org.gradle.api.Action;
 
-public class AnalyserExtension {
-    public static final String ANALYSER_EXTENSION_NAME = "e2immu";
-    public static final String ANALYSER_TASK_NAME = "e2immu-analyser";
+public class AnalyzerExtension {
+    public static final String ANALYZER_EXTENSION_NAME = "e2immu";
+    public static final String ANALYZER_TASK_NAME = "e2immu-analyzer";
 
     public boolean skipProject;
 
@@ -26,6 +26,7 @@ public class AnalyserExtension {
     public boolean incrementalAnalysis;
     public boolean parallel;
     public String analysisSteps;
+    public boolean quiet;
     public String debugTargets;
 
     /* InputConfiguration */
@@ -35,22 +36,27 @@ public class AnalyserExtension {
     public String testSourcePackages;
 
     /* from AnnotatedAPIConfiguration */
+    // use case 1
     public String analyzedAnnotatedApiDirs;
+    // use case 2
     public String readAnnotatedAPIPackages;
-    public String writeAnnotatedAPIDir;
     public String writeAnalyzedAnnotatedAPIDir;
+    // use case 3
+    public String writeAnnotatedAPIDir;
+    public String writeAnnotatedAPIPackages;
+    public String writeAnnotatedAPITargetPackage;
 
     // actions
     public String action;
     public String[] actionParameters;
 
-    private final ActionBroadcast<AnalyserProperties> propertiesActions;
+    private final ActionBroadcast<AnalyzerProperties> propertiesActions;
 
-    public AnalyserExtension(ActionBroadcast<AnalyserProperties> propertiesActions) {
+    public AnalyzerExtension(ActionBroadcast<AnalyzerProperties> propertiesActions) {
         this.propertiesActions = propertiesActions;
     }
 
-    public void properties(Action<? super AnalyserProperties> action) {
+    public void properties(Action<? super AnalyzerProperties> action) {
         propertiesActions.add(action);
     }
 }

@@ -27,39 +27,39 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-public class AnalyserPlugin implements Plugin<Project> {
-    private static final Logger LOGGER = Logging.getLogger(AnalyserPlugin.class);
+public class AnalyzerPlugin implements Plugin<Project> {
+    private static final Logger LOGGER = Logging.getLogger(AnalyzerPlugin.class);
 
     @Override
     public void apply(Project project) {
-        if (project.getExtensions().findByName(AnalyserExtension.ANALYSER_EXTENSION_NAME) == null) {
-            Map<String, ActionBroadcast<AnalyserProperties>> actionBroadcastMap = new HashMap<>();
+        if (project.getExtensions().findByName(AnalyzerExtension.ANALYZER_EXTENSION_NAME) == null) {
+            Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap = new HashMap<>();
             addExtensions(project, actionBroadcastMap);
-            LOGGER.debug("Adding " + AnalyserExtension.ANALYSER_TASK_NAME + " task to " + project);
-            AnalyserTask task = project.getTasks().create(AnalyserExtension.ANALYSER_TASK_NAME, AnalyserTask.class);
+            LOGGER.debug("Adding " + AnalyzerExtension.ANALYZER_TASK_NAME + " task to " + project);
+            AnalyzerTask task = project.getTasks().create(AnalyzerExtension.ANALYZER_TASK_NAME, AnalyzerTask.class);
             task.setDescription("Analyses " + project + " and its sub-projects with the e2immu analyser.");
             configureTask(task, project, actionBroadcastMap);
         }
     }
 
-    private void addExtensions(Project project, Map<String, ActionBroadcast<AnalyserProperties>> actionBroadcastMap) {
+    private void addExtensions(Project project, Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
         project.getAllprojects().forEach(p -> {
-            LOGGER.debug("Adding " + AnalyserExtension.ANALYSER_EXTENSION_NAME + " extension to " + p);
-            ActionBroadcast<AnalyserProperties> actionBroadcast = new ActionBroadcast<>();
+            LOGGER.debug("Adding " + AnalyzerExtension.ANALYZER_EXTENSION_NAME + " extension to " + p);
+            ActionBroadcast<AnalyzerProperties> actionBroadcast = new ActionBroadcast<>();
             actionBroadcastMap.put(project.getPath(), actionBroadcast);
-            p.getExtensions().create(AnalyserExtension.ANALYSER_EXTENSION_NAME, AnalyserExtension.class, actionBroadcast);
+            p.getExtensions().create(AnalyzerExtension.ANALYZER_EXTENSION_NAME, AnalyzerExtension.class, actionBroadcast);
         });
     }
 
-    private void configureTask(AnalyserTask analyserTask, Project project, Map<String, ActionBroadcast<AnalyserProperties>> actionBroadcastMap) {
-        ConventionMapping conventionMapping = analyserTask.getConventionMapping();
-        // this will call the AnalyserPropertyComputer to populate the properties of the task just before running it
-        conventionMapping.map("properties", () -> new AnalyserPropertyComputer(actionBroadcastMap, project).computeProperties());
+    private void configureTask(AnalyzerTask analyzerTask, Project project, Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
+        ConventionMapping conventionMapping = analyzerTask.getConventionMapping();
+        // this will call the AnalyzerPropertyComputer to populate the properties of the task just before running it
+        conventionMapping.map("properties", () -> new AnalyzerPropertyComputer(actionBroadcastMap, project).computeProperties());
 
         Callable<Iterable<? extends Task>> compileTasks = () -> project.getAllprojects().stream()
-                .filter(p -> p.getPlugins().hasPlugin(JavaPlugin.class) && !p.getExtensions().getByType(AnalyserExtension.class).skipProject)
+                .filter(p -> p.getPlugins().hasPlugin(JavaPlugin.class) && !p.getExtensions().getByType(AnalyzerExtension.class).skipProject)
                 .map(p -> p.getTasks().getByName(JavaPlugin.COMPILE_JAVA_TASK_NAME))
                 .collect(Collectors.toList());
-        analyserTask.dependsOn(compileTasks);
+        analyzerTask.dependsOn(compileTasks);
     }
 }

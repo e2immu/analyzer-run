@@ -29,8 +29,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 
-public class AnalyserTask extends ConventionTask {
-    private static final Logger LOGGER = Logging.getLogger(AnalyserTask.class);
+public class AnalyzerTask extends ConventionTask {
+    private static final Logger LOGGER = Logging.getLogger(AnalyzerTask.class);
     private Map<String, String> analyserProperties;
 
     @TaskAction
@@ -42,7 +42,7 @@ public class AnalyserTask extends ConventionTask {
             return;
         }
 
-     if (!LOGGER.isInfoEnabled()) {
+        if (!LOGGER.isInfoEnabled()) {
             properties.put(Main.QUIET, "true");
         } else if (LOGGER.isDebugEnabled()) {
             String inExtension = properties.get(Main.DEBUG);
@@ -54,7 +54,7 @@ public class AnalyserTask extends ConventionTask {
         String action = properties.get(Main.ACTION);
         if (action != null) {
             String ap = properties.get(Main.ACTION_PARAMETER);
-            String[] actionParameters = ap == null ? new String[0] : ap.split(AnalyserPropertyComputer.M_A_G_I_C);
+            String[] actionParameters = ap == null ? new String[0] : ap.split(AnalyzerPropertyComputer.M_A_G_I_C);
             int exitValue = ExecuteAction.run(action, actionParameters, configuration);
             if (exitValue != 0) {
                 throw new RuntimeException("Analyser exited with error value " + exitValue + ": "

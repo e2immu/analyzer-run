@@ -1,5 +1,6 @@
 package org.e2immu.analyzer.run.main;
 
+import ch.qos.logback.classic.Level;
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.Composer;
@@ -10,15 +11,13 @@ import org.e2immu.language.inspection.integration.JavaInspectorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 public class RunAnalyzer implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RunAnalyzer.class);
@@ -61,22 +60,19 @@ public class RunAnalyzer implements Runnable {
             Predicate<Info> filter;
             if (ac.annotatedApiPackages().isEmpty()) {
                 filter = w -> true;
+                LOGGER.info("No filter.");
             } else {
                 filter = new PackageFilter(ac.annotatedApiPackages());
+                LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
             }
             Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
             List<TypeInfo> primaryTypes = javaInspector.compiledTypesManager()
                     .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
             LOGGER.info("Have {} primary types loaded", primaryTypes.size());
             Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
-
-            Path destination = Path.of(ac.annotatedApiTargetDirectory());
-
-            if (destination.toFile().mkdirs()) {
-                LOGGER.info("Created directory {}", destination);
-            }
             composer.write(apiTypes, ac.annotatedApiTargetDirectory());
         } catch (IOException ioe) {
+            ioe.printStackTrace();
             LOGGER.error("Caught IO exception: {}", ioe.getMessage());
             exitValue = 1;
         }

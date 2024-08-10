@@ -29,10 +29,6 @@ public class Configuration {
                + languageConfiguration;
     }
 
-    public void initializeLoggers() {
-
-    }
-
     public static class Builder {
         private GeneralConfiguration generalConfiguration;
         private InputConfiguration inputConfiguration;

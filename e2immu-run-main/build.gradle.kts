@@ -56,9 +56,10 @@ dependencies {
 
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("commons-cli:commons-cli:1.4")
+    // we'll be setting log levels based on the debugTargets property
+    implementation("ch.qos.logback:logback-classic:1.5.6")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
-    testImplementation("ch.qos.logback:logback-classic:1.5.6")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
 }
 

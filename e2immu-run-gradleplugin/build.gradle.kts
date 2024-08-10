@@ -14,8 +14,8 @@
 
 
 plugins {
-    java
-    id("maven-publish")
+    `java-gradle-plugin`
+    `maven-publish`
 }
 
 java {
@@ -52,6 +52,18 @@ dependencies {
 
     // GRADLE PLUGIN
     implementation(gradleApi())
+}
+
+gradlePlugin {
+    plugins {
+        create("e2immuAnalyzerPlugin") {
+            id = "org.e2immu.analyzer-plugin"
+            implementationClass = "org.e2immu.gradleplugin.AnalyzerPlugin"
+            displayName = "e2immu's gradle plugin"
+        }
+        description = "Run the e2immu analyzer from Gradle"
+        isAutomatedPublishing = true
+    }
 }
 
 

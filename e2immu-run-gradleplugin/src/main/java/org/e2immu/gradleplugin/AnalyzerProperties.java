@@ -16,11 +16,11 @@ package org.e2immu.gradleplugin;
 
 import java.util.Map;
 
-public class AnalyserProperties {
+public class AnalyzerProperties {
 
     private final Map<String, Object> properties;
 
-    public AnalyserProperties(Map<String, Object> properties) {
+    public AnalyzerProperties(Map<String, Object> properties) {
         this.properties = properties;
     }
 

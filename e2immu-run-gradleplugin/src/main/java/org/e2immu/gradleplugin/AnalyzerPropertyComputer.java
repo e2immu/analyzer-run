@@ -39,11 +39,11 @@ import java.util.stream.Collectors;
  * Property names are identical to those of the CLI (.cli.Main). In the system properties,
  * they have to be prefixed by the PREFIX defined in this class.
  */
-public record AnalyserPropertyComputer(
-        Map<String, ActionBroadcast<AnalyserProperties>> actionBroadcastMap,
+public record AnalyzerPropertyComputer(
+        Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap,
         Project targetProject) {
 
-    private static final Logger LOGGER = Logging.getLogger(AnalyserPropertyComputer.class);
+    private static final Logger LOGGER = Logging.getLogger(AnalyzerPropertyComputer.class);
     public static final String PREFIX = "e2immu-analyser.";
     // used for round trip String[] -> String -> String[]; TODO this should be done in a better way
     public static final String M_A_G_I_C = "__M_A_G_I_C__";
@@ -58,17 +58,17 @@ public record AnalyserPropertyComputer(
     }
 
     private void computeProperties(Project project, Map<String, Object> properties, String prefix) {
-        AnalyserExtension extension = project.getExtensions().getByType(AnalyserExtension.class);
+        AnalyzerExtension extension = project.getExtensions().getByType(AnalyzerExtension.class);
         if (extension.skipProject) {
             return;
         }
         Map<String, Object> rawProperties = new LinkedHashMap<>();
         detectProperties(project, rawProperties, extension);
 
-        ActionBroadcast<AnalyserProperties> actionBroadcast = actionBroadcastMap.get(project.getPath());
+        ActionBroadcast<AnalyzerProperties> actionBroadcast = actionBroadcastMap.get(project.getPath());
         if (actionBroadcast != null) {
-            AnalyserProperties analyserProperties = new AnalyserProperties(properties);
-            actionBroadcast.execute(analyserProperties);
+            AnalyzerProperties analyzerProperties = new AnalyzerProperties(properties);
+            actionBroadcast.execute(analyzerProperties);
         }
 
         // with the highest priority, override directly for this project from the system properties
@@ -81,11 +81,11 @@ public record AnalyserPropertyComputer(
         LOGGER.debug("Resulting map is " + properties);
 
         List<Project> enabledChildProjects = project.getChildProjects().values().stream()
-                .filter(p -> !p.getExtensions().getByType(AnalyserExtension.class).skipProject)
+                .filter(p -> !p.getExtensions().getByType(AnalyzerExtension.class).skipProject)
                 .toList();
 
         List<Project> skippedChildProjects = project.getChildProjects().values().stream()
-                .filter(p -> p.getExtensions().getByType(AnalyserExtension.class).skipProject)
+                .filter(p -> p.getExtensions().getByType(AnalyzerExtension.class).skipProject)
                 .toList();
 
         if (!skippedChildProjects.isEmpty()) {
@@ -101,11 +101,13 @@ public record AnalyserPropertyComputer(
         }
     }
 
-    private void detectProperties(Project project, Map<String, Object> properties, AnalyserExtension extension) {
+    private void detectProperties(Project project, Map<String, Object> properties, AnalyzerExtension extension) {
         // general
         properties.put(Main.INCREMENTAL_ANALYSIS, extension.incrementalAnalysis);
         properties.put(Main.PARALLEL, extension.parallel);
         properties.put(Main.ANALYSIS_STEPS, extension.analysisSteps);
+        properties.put(Main.DEBUG, extension.debugTargets);
+        properties.put(Main.QUIET, extension.quiet);
 
         // input
         properties.put(Main.SOURCE_PACKAGES, extension.sourcePackages);
@@ -120,15 +122,27 @@ public record AnalyserPropertyComputer(
         });
 
         // Annotated API
-        File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
-        properties.put(Main.ANALYZED_ANNOTATED_API, getOrDefault(extension.analyzedAnnotatedApiDirs,
-                AnnotatedAPIConfigurationImpl.DO_NOT_READ_ANALYZED_ANNOTATED_API));
-        properties.put(Main.ANNOTATED_API_PACKAGES, getOrDefault(extension.readAnnotatedAPIPackages,
-                AnnotatedAPIConfigurationImpl.DO_NOT_READ_ANNOTATED_API));
-        properties.put(Main.WRITE_ANALYZED_ANNOTATED_API_DIR, getOrDefault(extension.writeAnalyzedAnnotatedAPIDir,
-                new File(buildDir, "analyzedAnnotatedAPIs").getAbsolutePath()));
-        properties.put(Main.WRITE_ANNOTATED_API_DIR, getOrDefault(extension.writeAnnotatedAPIDir,
-                new File(buildDir, "annotatedAPIs").getAbsolutePath()));
+        // use case 1
+        if(extension.analyzedAnnotatedApiDirs != null) {
+            properties.put(Main.ANALYZED_ANNOTATED_API, extension.analyzedAnnotatedApiDirs);
+        }
+        // use case 2
+        if(extension.readAnnotatedAPIPackages != null) {
+            properties.put(Main.ANNOTATED_API_PACKAGES, extension.readAnnotatedAPIPackages);
+        }
+        if(extension.writeAnalyzedAnnotatedAPIDir != null) {
+            properties.put(Main.WRITE_ANALYZED_ANNOTATED_API_DIR, extension.writeAnalyzedAnnotatedAPIDir);
+        }
+        // use case 3
+        if(extension.writeAnnotatedAPIDir != null) {
+            properties.put(Main.WRITE_ANNOTATED_API_DIR, extension.writeAnnotatedAPIDir);
+        }
+        if(extension.writeAnnotatedAPITargetPackage != null) {
+            properties.put(Main.WRITE_ANNOTATED_API_TARGET_PACKAGE, extension.writeAnnotatedAPITargetPackage);
+        }
+        if(extension.writeAnnotatedAPIPackages != null) {
+            properties.put(Main.WRITE_ANNOTATED_API_PACKAGES, extension.writeAnnotatedAPIPackages);
+        }
 
         // actions
         properties.put(Main.ACTION, extension.action);

@@ -52,9 +52,12 @@ public class Main {
 
     public static final String DEPENDENCIES = "dependencies";
 
+    // use case 1
     public static final String ANALYZED_ANNOTATED_API = "analyzed-annotated-api";
+    // use case 2
     public static final String ANNOTATED_API_PACKAGES = "read-annotated-api-packages";
     public static final String WRITE_ANALYZED_ANNOTATED_API_DIR = "write-analyzed-annotated-api-dir";
+    // use case 3
     public static final String WRITE_ANNOTATED_API_DIR = "write-annotated-api-dir";
     public static final String WRITE_ANNOTATED_API_TARGET_PACKAGE = "write-annotated-api-target-package";
     public static final String WRITE_ANNOTATED_API_PACKAGES = "write-annotated-api-packages";
@@ -96,7 +99,6 @@ public class Main {
             String[] actionParameters = cmd.getOptionValues(ACTION_PARAMETER);
             return ExecuteAction.run(action, actionParameters, configuration);
         }
-        configuration.initializeLoggers();
         // the following will be output if the CONFIGURATION logger is active!
         LOGGER.debug("Configuration:\n{}", configuration);
         RunAnalyzer runAnalyser = new RunAnalyzer(configuration);
@@ -130,7 +132,7 @@ public class Main {
         GeneralConfiguration generalConfiguration = parseGeneralConfiguration(cmd);
         builder.setGeneralConfiguration(generalConfiguration);
 
-        InputConfiguration inputConfiguration = parseInputConfiguration(cmd);
+        InputConfiguration inputConfiguration = parseInputConfiguration(cmd, generalConfiguration);
         builder.setInputConfiguration(inputConfiguration);
 
         AnnotatedAPIConfiguration annotatedAPIConfiguration = parseAnnotatedAPIConfiguration(cmd);
@@ -144,8 +146,9 @@ public class Main {
     public static Configuration fromPropertyMap(Map<String, String> kvMap) {
         Configuration.Builder builder = new Configuration.Builder();
 
-        builder.setGeneralConfiguration(generalConfiguration(kvMap));
-        builder.setInputConfiguration(inputConfiguration(kvMap));
+        GeneralConfiguration generalConfiguration = generalConfiguration(kvMap);
+        builder.setGeneralConfiguration(generalConfiguration);
+        builder.setInputConfiguration(inputConfiguration(kvMap, generalConfiguration));
         builder.setAnnotatedAPIConfiguration(annotatedAPIConfiguration(kvMap));
 
         builder.setLanguageConfiguration(new LanguageConfigurationImpl(true));
@@ -233,7 +236,7 @@ public class Main {
                       " Use a dot at the end of a package name to accept sub-packages.").build());
     }
 
-    private static InputConfiguration inputConfiguration(Map<String, String> kvMap) {
+    private static InputConfiguration inputConfiguration(Map<String, String> kvMap, GeneralConfiguration generalConfiguration) {
         InputConfigurationImpl.Builder builder = new InputConfigurationImpl.Builder();
         setStringProperty(kvMap, JRE, builder::setAlternativeJREDirectory);
         setStringProperty(kvMap, SOURCE_ENCODING, builder::setSourceEncoding);
@@ -249,10 +252,17 @@ public class Main {
         setSplitStringProperty(kvMap, File.pathSeparator, TESTS_RUNTIME_CLASSPATH, builder::addTestRuntimeClassPath);
 
         setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
+        copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
     }
 
-    private static InputConfiguration parseInputConfiguration(CommandLine cmd) {
+    private static void copyFromGeneralConfiguration(GeneralConfiguration generalConfiguration, InputConfigurationImpl.Builder builder) {
+        if (generalConfiguration.debugTargets().contains("classpath")) {
+            builder.setInfoLogClasspath(true);
+        }
+    }
+
+    private static InputConfiguration parseInputConfiguration(CommandLine cmd, GeneralConfiguration generalConfiguration) {
         InputConfigurationImpl.Builder builder = new InputConfigurationImpl.Builder();
 
         String alternativeJREDirectory = cmd.getOptionValue(JRE);
@@ -275,6 +285,8 @@ public class Main {
 
         String[] restrictTestSourceToPackages = cmd.getOptionValues(TEST_SOURCE_PACKAGES);
         splitAndAdd(restrictTestSourceToPackages, COMMA, builder::addRestrictTestSourceToPackages);
+
+        copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
     }
 
