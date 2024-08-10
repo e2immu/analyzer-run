@@ -23,6 +23,12 @@ public class Configuration {
         this.languageConfiguration = languageConfiguration;
     }
 
+    @Override
+    public String toString() {
+        return generalConfiguration + "\n" + inputConfiguration + "\n" + annotatedAPIConfiguration + "\n"
+               + languageConfiguration;
+    }
+
     public void initializeLoggers() {
 
     }

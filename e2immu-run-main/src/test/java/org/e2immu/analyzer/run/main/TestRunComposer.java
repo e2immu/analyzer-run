@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRunComposer {
@@ -25,5 +26,12 @@ public class TestRunComposer {
                 "--write-annotated-api-dir=" + file.getAbsolutePath()
         });
         assertTrue(file.canRead());
+        File pkg = new File(file, "org/e2immu/aapi");
+        File javaIo = new File(pkg, "JavaIo.java");
+        assertFalse(javaIo.canRead());
+        File javaUtil = new File(pkg, "JavaUtil.java");
+        assertTrue(javaUtil.canRead());
+        File javaUtilConcurrent = new File(pkg, "JavaUtilConcurrent.java");
+        assertTrue(javaUtilConcurrent.canRead());
     }
 }

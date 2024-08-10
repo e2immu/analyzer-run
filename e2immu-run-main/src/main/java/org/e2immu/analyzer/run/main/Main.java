@@ -353,6 +353,11 @@ public class Main {
         String writeDir = cmd.getOptionValue(WRITE_ANNOTATED_API_DIR);
         builder.setAnnotatedApiTargetDirectory(writeDir);
 
+        String targetPackage = cmd.getOptionValue(WRITE_ANNOTATED_API_TARGET_PACKAGE);
+        builder.setAnnotatedApiTargetPackage(targetPackage);
+
+        String[] writePackages = cmd.getOptionValues(WRITE_ANNOTATED_API_PACKAGES);
+        splitAndAdd(writePackages, File.pathSeparator, builder::addAnnotatedApiPackages);
         return builder.build();
     }
 

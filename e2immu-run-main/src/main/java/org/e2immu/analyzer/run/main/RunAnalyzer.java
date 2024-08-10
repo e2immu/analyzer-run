@@ -3,6 +3,7 @@ package org.e2immu.analyzer.run.main;
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.Composer;
+import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class RunAnalyzer implements Runnable {
@@ -56,7 +58,13 @@ public class RunAnalyzer implements Runnable {
 
             AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
             String destinationPackage = ac.annotatedApiTargetPackage() == null ? "" : ac.annotatedApiTargetPackage();
-            Composer composer = new Composer(javaInspector.runtime(), destinationPackage, w -> true);
+            Predicate<Info> filter;
+            if (ac.annotatedApiPackages().isEmpty()) {
+                filter = w -> true;
+            } else {
+                filter = new PackageFilter(ac.annotatedApiPackages());
+            }
+            Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
             List<TypeInfo> primaryTypes = javaInspector.compiledTypesManager()
                     .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
             LOGGER.info("Have {} primary types loaded", primaryTypes.size());
@@ -73,6 +81,24 @@ public class RunAnalyzer implements Runnable {
             exitValue = 1;
         }
         LOGGER.info("End of e2immu main, AAPI skeleton generation mode.");
+    }
+
+    record PackageFilter(List<String> acceptedPackages) implements Predicate<Info> {
+
+        @Override
+        public boolean test(Info info) {
+            String myPackageName = info.typeInfo().packageName();
+            for (String s : acceptedPackages) {
+                if (s.endsWith(".")) {
+                    if (myPackageName.startsWith(s)) return true;
+                    String withoutDot = s.substring(0, s.length() - 1);
+                    if (myPackageName.equals(withoutDot)) return true;
+                } else if (myPackageName.equals(s)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     public void printSummaries() {
