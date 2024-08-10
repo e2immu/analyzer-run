@@ -7,6 +7,7 @@ import org.e2immu.analyzer.shallow.analyzer.Composer;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
+import org.e2immu.language.inspection.api.parser.Summary;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RunAnalyzer implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RunAnalyzer.class);
@@ -66,9 +68,15 @@ public class RunAnalyzer implements Runnable {
                 LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
             }
             Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
-            List<TypeInfo> primaryTypes = javaInspector.compiledTypesManager()
+            List<TypeInfo> compiledPrimaryTypes = javaInspector.compiledTypesManager()
                     .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
-            LOGGER.info("Have {} primary types loaded", primaryTypes.size());
+            LOGGER.info("Loaded {} compiled primary types", compiledPrimaryTypes.size());
+
+            Summary summary = javaInspector.parse(true);
+            Collection<TypeInfo> sourcePrimaryTypes = summary.types();
+            LOGGER.info("Parsed {} primary source types", sourcePrimaryTypes.size());
+
+            List<TypeInfo> primaryTypes = Stream.concat(compiledPrimaryTypes.stream(), sourcePrimaryTypes.stream()).toList();
             Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
             composer.write(apiTypes, ac.annotatedApiTargetDirectory());
         } catch (IOException ioe) {

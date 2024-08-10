@@ -339,13 +339,13 @@ public class Main {
         AnnotatedAPIConfigurationImpl.Builder builder = new AnnotatedAPIConfigurationImpl.Builder();
 
         setSplitStringProperty(kvMap, File.pathSeparator, ANALYZED_ANNOTATED_API, builder::addAnalyzedAnnotatedApiDirs);
-        setSplitStringProperty(kvMap, File.pathSeparator, ANNOTATED_API_PACKAGES, builder::addAnnotatedApiSourcePackages);
+        setSplitStringProperty(kvMap, COMMA, ANNOTATED_API_PACKAGES, builder::addAnnotatedApiSourcePackages);
 
         setStringProperty(kvMap, WRITE_ANALYZED_ANNOTATED_API_DIR, builder::setAnalyzedAnnotatedApiTargetDirectory);
         setStringProperty(kvMap, WRITE_ANNOTATED_API_DIR, builder::setAnnotatedApiTargetDirectory);
         setStringProperty(kvMap, WRITE_ANNOTATED_API_TARGET_PACKAGE, builder::setAnnotatedApiTargetPackage);
 
-        setSplitStringProperty(kvMap, File.pathSeparator, WRITE_ANNOTATED_API_PACKAGES, builder::addAnnotatedApiPackages);
+        setSplitStringProperty(kvMap, COMMA, WRITE_ANNOTATED_API_PACKAGES, builder::addAnnotatedApiPackages);
 
         return builder.build();
     }
@@ -357,7 +357,7 @@ public class Main {
         splitAndAdd(analyzedDirs, File.pathSeparator, builder::addAnalyzedAnnotatedApiDirs);
 
         String[] acceptPackages = cmd.getOptionValues(ANNOTATED_API_PACKAGES);
-        splitAndAdd(acceptPackages, File.pathSeparator, builder::addAnnotatedApiSourcePackages);
+        splitAndAdd(acceptPackages, COMMA, builder::addAnnotatedApiSourcePackages);
 
         String writeAnalyzedDir = cmd.getOptionValue(WRITE_ANALYZED_ANNOTATED_API_DIR);
         builder.setAnalyzedAnnotatedApiTargetDirectory(writeAnalyzedDir);
@@ -369,7 +369,7 @@ public class Main {
         builder.setAnnotatedApiTargetPackage(targetPackage);
 
         String[] writePackages = cmd.getOptionValues(WRITE_ANNOTATED_API_PACKAGES);
-        splitAndAdd(writePackages, File.pathSeparator, builder::addAnnotatedApiPackages);
+        splitAndAdd(writePackages, COMMA, builder::addAnnotatedApiPackages);
         return builder.build();
     }
 

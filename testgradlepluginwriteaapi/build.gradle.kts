@@ -37,8 +37,7 @@ dependencies {
 }
 
 val functionalTestTask = tasks.register<Test>("functionalTest") {
-    dependsOn(tasks.getByName("writeDependencies"))
-    dependsOn(tasks.getByName("analyzeDependencies"))
+    dependsOn(tasks.getByName("e2immu-analyzer"))
 
     description = "Runs the functional tests."
     group = "verification"
@@ -60,7 +59,7 @@ e2immu {
     jmods = "java.base.jmod"
     debugTargets = "classpath"
     writeAnnotatedAPIDir = "/tmp/testWriteAnnotatedAPIDir"
-    writeAnnotatedAPIPackages = "java.util."
+    writeAnnotatedAPIPackages = "java.util.,com.foo"
     writeAnnotatedAPITargetPackage = "org.e2immu.testwrite"
 }
 
