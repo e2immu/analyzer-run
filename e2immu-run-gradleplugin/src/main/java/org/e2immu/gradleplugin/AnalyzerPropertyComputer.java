@@ -127,9 +127,6 @@ public record AnalyzerPropertyComputer(
             properties.put(Main.ANALYZED_ANNOTATED_API, extension.analyzedAnnotatedApiDirs);
         }
         // use case 2
-        if(extension.readAnnotatedAPIPackages != null) {
-            properties.put(Main.ANNOTATED_API_PACKAGES, extension.readAnnotatedAPIPackages);
-        }
         if(extension.writeAnalyzedAnnotatedAPIDir != null) {
             properties.put(Main.WRITE_ANALYZED_ANNOTATED_API_DIR, extension.writeAnalyzedAnnotatedAPIDir);
         }

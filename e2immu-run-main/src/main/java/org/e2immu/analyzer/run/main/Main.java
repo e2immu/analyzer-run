@@ -55,7 +55,6 @@ public class Main {
     // use case 1
     public static final String ANALYZED_ANNOTATED_API = "analyzed-annotated-api";
     // use case 2
-    public static final String ANNOTATED_API_PACKAGES = "read-annotated-api-packages";
     public static final String WRITE_ANALYZED_ANNOTATED_API_DIR = "write-analyzed-annotated-api-dir";
     // use case 3
     public static final String WRITE_ANNOTATED_API_DIR = "write-annotated-api-dir";
@@ -317,10 +316,6 @@ public class Main {
                       " Use the Java path separator '" + File.pathSeparator + "' to separate directories, " +
                       "or use this options multiple times.").build());
 
-        options.addOption(Option.builder().longOpt(ANNOTATED_API_PACKAGES).hasArg().argName("PACKAGES")
-                .desc("Designate these packages from the source input as packages containing Annotated " +
-                      "API sources.").build());
-
         options.addOption(Option.builder().longOpt(WRITE_ANALYZED_ANNOTATED_API_DIR).hasArg().argName("DIR")
                 .desc("Where to write analyzed Annotated API files.").build());
 
@@ -339,7 +334,6 @@ public class Main {
         AnnotatedAPIConfigurationImpl.Builder builder = new AnnotatedAPIConfigurationImpl.Builder();
 
         setSplitStringProperty(kvMap, File.pathSeparator, ANALYZED_ANNOTATED_API, builder::addAnalyzedAnnotatedApiDirs);
-        setSplitStringProperty(kvMap, COMMA, ANNOTATED_API_PACKAGES, builder::addAnnotatedApiSourcePackages);
 
         setStringProperty(kvMap, WRITE_ANALYZED_ANNOTATED_API_DIR, builder::setAnalyzedAnnotatedApiTargetDirectory);
         setStringProperty(kvMap, WRITE_ANNOTATED_API_DIR, builder::setAnnotatedApiTargetDirectory);
@@ -356,9 +350,6 @@ public class Main {
         String[] analyzedDirs = cmd.getOptionValues(ANALYZED_ANNOTATED_API);
         splitAndAdd(analyzedDirs, File.pathSeparator, builder::addAnalyzedAnnotatedApiDirs);
 
-        String[] acceptPackages = cmd.getOptionValues(ANNOTATED_API_PACKAGES);
-        splitAndAdd(acceptPackages, COMMA, builder::addAnnotatedApiSourcePackages);
-
         String writeAnalyzedDir = cmd.getOptionValue(WRITE_ANALYZED_ANNOTATED_API_DIR);
         builder.setAnalyzedAnnotatedApiTargetDirectory(writeAnalyzedDir);
 
@@ -374,14 +365,16 @@ public class Main {
     }
 
     // *************************************** */
+    private static final String DO_NOT_SPLIT = "__DO_NOT_SPLIT__";
 
     private static void splitAndAdd(String[] strings, String separator, Consumer<String> adder) {
         if (strings != null) {
             for (String string : strings) {
-                String[] parts = string.split(separator);
+                String s = string.replace("::", DO_NOT_SPLIT);
+                String[] parts = s.split(separator);
                 for (String part : parts) {
                     if (part != null && !part.trim().isEmpty()) {
-                        adder.accept(part);
+                        adder.accept(part.replace(DO_NOT_SPLIT, ":"));
                     }
                 }
             }

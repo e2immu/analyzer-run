@@ -39,7 +39,6 @@ public class AnalyzerExtension {
     // use case 1
     public String analyzedAnnotatedApiDirs;
     // use case 2
-    public String readAnnotatedAPIPackages;
     public String writeAnalyzedAnnotatedAPIDir;
     // use case 3
     public String writeAnnotatedAPIDir;

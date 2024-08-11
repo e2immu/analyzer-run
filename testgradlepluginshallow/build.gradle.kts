@@ -58,8 +58,11 @@ project.group = "io.codelaser.build"
 e2immu {
     jmods = "java.base.jmod"
     debugTargets = "classpath"
-    readAnnotatedAPIPackages = "org.e2immu.testpackages"
+    // the following directory does not exist, so we're working with the 2 test sources only
+    sourcePackages = "org.e2immu.testpackages"
+    testSourcePackages = "org.e2immu.testwrite"
     writeAnalyzedAnnotatedAPIDir = "/tmp/testWriteAnalyzedAnnotatedAPIDir"
+    analyzedAnnotatedApiDirs = "testgradlepluginshallow/src/main/resources/json"
 }
 
 // no logic for publishing!
