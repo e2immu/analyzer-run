@@ -91,6 +91,9 @@ public class RunAnalyzer implements Runnable {
 
         @Override
         public boolean test(Info info) {
+            if (acceptedPackages.isEmpty()) {
+                return true;
+            }
             String myPackageName = info.typeInfo().packageName();
             for (String s : acceptedPackages) {
                 if (s.endsWith(".")) {
