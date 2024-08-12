@@ -1,9 +1,12 @@
 package org.e2immu.analyzer.run.main;
 
+import org.e2immu.analyzer.modification.prepwork.hct.ComputeHiddenContent;
+import org.e2immu.analyzer.modification.prepwork.hct.HiddenContentTypes;
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.shallow.analyzer.*;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
+import org.e2immu.language.cst.impl.analysis.PropertyImpl;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
 import org.e2immu.language.inspection.api.parser.Summary;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
@@ -11,6 +14,7 @@ import org.e2immu.util.internal.util.Trie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -45,7 +49,6 @@ public class RunAnalyzer implements Runnable {
             }
             runAnalyzer();
         } catch (IOException ioe) {
-            ioe.printStackTrace();
             LOGGER.error("Caught IO exception: {}", ioe.getMessage());
             exitValue = 1;
         }
@@ -53,8 +56,19 @@ public class RunAnalyzer implements Runnable {
 
     private void runAnalyzer() throws IOException {
         JavaInspector javaInspector = new JavaInspectorImpl();
-
         javaInspector.initialize(configuration.inputConfiguration());
+
+        AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
+        for (String dir : ac.analyzedAnnotatedApiDirs()) {
+            File directory = new File(dir);
+            if (directory.canRead()) {
+                new Load().go(javaInspector, directory);
+                LOGGER.info("Read json files in AAAPI {}", directory.getAbsolutePath());
+            } else {
+                LOGGER.warn("Path '{}' is not a directory containing analyzed annotated API files", directory);
+            }
+        }
+
         Summary summary = javaInspector.parse(false);
         if (summary.haveErrors()) {
             LOGGER.error("Have parsing errors, bailing out");
@@ -67,6 +81,17 @@ public class RunAnalyzer implements Runnable {
         boolean empty = analysisSteps.isEmpty();
         if (empty || analysisSteps.contains("hc")) {
             LOGGER.info("Computing hidden content for {} types", summary.types().size());
+            ComputeHiddenContent chc = new ComputeHiddenContent(javaInspector.runtime());
+            for (TypeInfo typeInfo : summary.types()) {
+                typeInfo.recursiveSubTypeStream().forEach(st -> {
+                    HiddenContentTypes stHct = chc.compute(st);
+                    st.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, stHct);
+                    st.methodAndConstructorStream().forEach(m -> {
+                        HiddenContentTypes mHct = chc.compute(stHct, m);
+                        m.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, mHct);
+                    });
+                });
+            }
         }
 
         // write results

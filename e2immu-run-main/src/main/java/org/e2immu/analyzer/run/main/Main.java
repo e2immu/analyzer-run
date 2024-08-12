@@ -50,6 +50,7 @@ public class Main {
     public static final String RUNTIME_CLASSPATH = "runtime-classpath";
     public static final String TEST_CLASSPATH = "test-classpath";
     public static final String TESTS_RUNTIME_CLASSPATH = "test-runtime-classpath";
+    public static final String EXCLUDE_FROM_CLASSPATH = "exclude-from-classpath";
 
     public static final String DEPENDENCIES = "dependencies";
 
@@ -232,15 +233,18 @@ public class Main {
                       + File.pathSeparator + "'. Default, when this option is absent, is '"
                       + Arrays.toString(InputConfigurationImpl.DEFAULT_CLASSPATH) + "'.").build());
 
-        options.addOption(Option.builder().longOpt(SOURCE_PACKAGES).hasArg().argName("PATH")
+        options.addOption(Option.builder().longOpt(SOURCE_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Restrict the sources parsed to the paths" +
                       " specified in the argument. Use ',' to separate paths, or use this option multiple times." +
                       " Use a dot at the end of a package name to accept sub-packages.").build());
 
-        options.addOption(Option.builder().longOpt(TEST_SOURCE_PACKAGES).hasArg().argName("PATH")
+        options.addOption(Option.builder().longOpt(TEST_SOURCE_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Restrict the test sources parsed to the paths" +
                       " specified in the argument. Use ',' to separate paths, or use this option multiple times." +
                       " Use a dot at the end of a package name to accept sub-packages.").build());
+
+        options.addOption(Option.builder().longOpt(EXCLUDE_FROM_CLASSPATH).hasArg().argName("PATH")
+                .desc("Jar names to be excluded from the classpath, to give priority to others").build());
     }
 
     private static InputConfiguration inputConfiguration(Map<String, String> kvMap, GeneralConfiguration generalConfiguration) {
@@ -250,8 +254,8 @@ public class Main {
 
         setSplitStringProperty(kvMap, File.pathSeparator, SOURCE, builder::addSources);
         setSplitStringProperty(kvMap, File.pathSeparator, TEST_SOURCE, builder::addTestSources);
-        setSplitStringProperty(kvMap, File.pathSeparator, SOURCE_PACKAGES, builder::addRestrictSourceToPackages);
-        setSplitStringProperty(kvMap, File.pathSeparator, TEST_SOURCE_PACKAGES, builder::addRestrictTestSourceToPackages);
+        setSplitStringProperty(kvMap, ",", SOURCE_PACKAGES, builder::addRestrictSourceToPackages);
+        setSplitStringProperty(kvMap, ",", TEST_SOURCE_PACKAGES, builder::addRestrictTestSourceToPackages);
 
         setSplitStringProperty(kvMap, File.pathSeparator, CLASSPATH, builder::addClassPath);
         setSplitStringProperty(kvMap, File.pathSeparator, TEST_CLASSPATH, builder::addTestClassPath);
@@ -259,6 +263,8 @@ public class Main {
         setSplitStringProperty(kvMap, File.pathSeparator, TESTS_RUNTIME_CLASSPATH, builder::addTestRuntimeClassPath);
 
         setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
+        setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
+
         copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
     }

@@ -121,6 +121,7 @@ public record AnalyzerPropertyComputer(
         properties.put(Main.SOURCE_PACKAGES, extension.sourcePackages);
         properties.put(Main.TEST_SOURCE_PACKAGES, extension.testSourcePackages);
         properties.put(Main.JRE, extension.jre);
+        properties.put(Main.EXCLUDE_FROM_CLASSPATH, extension.excludeFromClasspath);
 
         project.getPlugins().withType(JavaPlugin.class, javaPlugin -> {
             boolean hasSource = detectSourceDirsAndJavaClasspath(project, properties, extension.jmods);
