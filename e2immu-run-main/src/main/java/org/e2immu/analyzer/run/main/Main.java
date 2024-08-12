@@ -38,6 +38,7 @@ public class Main {
     public static final String SOURCE_ENCODING = "source-encoding";
     public static final String INCREMENTAL_ANALYSIS = "incremental-analysis";
     public static final String ANALYSIS_STEPS = "analysis-steps";
+    public static final String ANALYSIS_RESULTS_DIR = "analysis-results-dir";
     public static final String DEBUG = "debug";
 
     public static final String SOURCE = "source";
@@ -53,13 +54,13 @@ public class Main {
     public static final String DEPENDENCIES = "dependencies";
 
     // use case 1
-    public static final String ANALYZED_ANNOTATED_API = "analyzed-annotated-api";
+    public static final String ANALYZED_ANNOTATED_API_DIRS = "analyzed-annotated-api-dirs";
     // use case 2
-    public static final String WRITE_ANALYZED_ANNOTATED_API_DIR = "write-analyzed-annotated-api-dir";
+    public static final String ANALYZED_ANNOTATED_API_TARGET_DIR = "analyzed-annotated-api-target-dir";
     // use case 3
-    public static final String WRITE_ANNOTATED_API_DIR = "write-annotated-api-dir";
-    public static final String WRITE_ANNOTATED_API_TARGET_PACKAGE = "write-annotated-api-target-package";
-    public static final String WRITE_ANNOTATED_API_PACKAGES = "write-annotated-api-packages";
+    public static final String ANNOTATED_API_TARGET_DIR = "annotated-api-target-dir";
+    public static final String ANNOTATED_API_TARGET_PACKAGE = "annotated-api-target-package";
+    public static final String ANNOTATED_API_PACKAGES = "annotated-api-packages";
 
     public static final String COMMA = ",";
 
@@ -163,6 +164,10 @@ public class Main {
                         Provide an alternative list of analysis steps, separated by comma, or with multiple values \
                         of this property. Choose from: X Y Z
                         """).build());
+        options.addOption(Option.builder().longOpt(ANALYSIS_RESULTS_DIR).hasArg().argName("DIR")
+                .desc("""
+                        Directory to write results of analyzer.
+                        """).build());
         options.addOption(Option.builder("d").longOpt(DEBUG).hasArg().argName("TARGETS")
                 .desc("""
                         Debug targets. Choose from: X Y Z
@@ -179,6 +184,7 @@ public class Main {
         setBooleanProperty(kvMap, INCREMENTAL_ANALYSIS, builder::setIncrementalAnalysis);
         setSplitStringProperty(kvMap, COMMA, DEBUG, builder::addDebugTargets);
         setSplitStringProperty(kvMap, COMMA, ANALYSIS_STEPS, builder::addAnalysisSteps);
+        setStringProperty(kvMap, ANALYSIS_RESULTS_DIR, builder::setAnalysisResultsDir);
         return builder.build();
     }
 
@@ -194,6 +200,8 @@ public class Main {
 
         String[] debugTargets = cmd.getOptionValues(DEBUG);
         splitAndAdd(debugTargets, COMMA, builder::addDebugTargets);
+
+        builder.setAnalysisResultsDir(cmd.getOptionValue(ANALYSIS_RESULTS_DIR));
 
         return builder.build();
     }
@@ -311,21 +319,21 @@ public class Main {
     */
 
     private static void addAnnotatedAPIConfigurationOptions(Options options) {
-        options.addOption(Option.builder("s").longOpt(ANALYZED_ANNOTATED_API).hasArg().argName("DIRS")
+        options.addOption(Option.builder("s").longOpt(ANALYZED_ANNOTATED_API_DIRS).hasArg().argName("DIRS")
                 .desc("Add a directory where the analyzed annotated API files can be found." +
                       " Use the Java path separator '" + File.pathSeparator + "' to separate directories, " +
                       "or use this options multiple times.").build());
 
-        options.addOption(Option.builder().longOpt(WRITE_ANALYZED_ANNOTATED_API_DIR).hasArg().argName("DIR")
+        options.addOption(Option.builder().longOpt(ANALYZED_ANNOTATED_API_TARGET_DIR).hasArg().argName("DIR")
                 .desc("Where to write analyzed Annotated API files.").build());
 
-        options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_DIR).hasArg().argName("DIR")
+        options.addOption(Option.builder().longOpt(ANNOTATED_API_TARGET_DIR).hasArg().argName("DIR")
                 .desc("Where to write Annotated API skeleton files, extracted from sources.").build());
 
-        options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_TARGET_PACKAGE).hasArg().argName("PACKAGE")
+        options.addOption(Option.builder().longOpt(ANNOTATED_API_TARGET_PACKAGE).hasArg().argName("PACKAGE")
                 .desc("Which package to write the Annotated API skeleton files to").build());
 
-        options.addOption(Option.builder().longOpt(WRITE_ANNOTATED_API_PACKAGES).hasArg().argName("PACKAGES")
+        options.addOption(Option.builder().longOpt(ANNOTATED_API_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Create AAPI skeletons from the following packages of the source.").build());
 
     }
@@ -333,13 +341,13 @@ public class Main {
     private static AnnotatedAPIConfiguration annotatedAPIConfiguration(Map<String, String> kvMap) {
         AnnotatedAPIConfigurationImpl.Builder builder = new AnnotatedAPIConfigurationImpl.Builder();
 
-        setSplitStringProperty(kvMap, File.pathSeparator, ANALYZED_ANNOTATED_API, builder::addAnalyzedAnnotatedApiDirs);
+        setSplitStringProperty(kvMap, File.pathSeparator, ANALYZED_ANNOTATED_API_DIRS, builder::addAnalyzedAnnotatedApiDirs);
 
-        setStringProperty(kvMap, WRITE_ANALYZED_ANNOTATED_API_DIR, builder::setAnalyzedAnnotatedApiTargetDirectory);
-        setStringProperty(kvMap, WRITE_ANNOTATED_API_DIR, builder::setAnnotatedApiTargetDirectory);
-        setStringProperty(kvMap, WRITE_ANNOTATED_API_TARGET_PACKAGE, builder::setAnnotatedApiTargetPackage);
+        setStringProperty(kvMap, ANALYZED_ANNOTATED_API_TARGET_DIR, builder::setAnalyzedAnnotatedApiTargetDir);
+        setStringProperty(kvMap, ANNOTATED_API_TARGET_DIR, builder::setAnnotatedApiTargetDir);
+        setStringProperty(kvMap, ANNOTATED_API_TARGET_PACKAGE, builder::setAnnotatedApiTargetPackage);
 
-        setSplitStringProperty(kvMap, COMMA, WRITE_ANNOTATED_API_PACKAGES, builder::addAnnotatedApiPackages);
+        setSplitStringProperty(kvMap, COMMA, ANNOTATED_API_PACKAGES, builder::addAnnotatedApiPackages);
 
         return builder.build();
     }
@@ -347,19 +355,19 @@ public class Main {
     private static AnnotatedAPIConfiguration parseAnnotatedAPIConfiguration(CommandLine cmd) {
         AnnotatedAPIConfigurationImpl.Builder builder = new AnnotatedAPIConfigurationImpl.Builder();
 
-        String[] analyzedDirs = cmd.getOptionValues(ANALYZED_ANNOTATED_API);
+        String[] analyzedDirs = cmd.getOptionValues(ANALYZED_ANNOTATED_API_DIRS);
         splitAndAdd(analyzedDirs, File.pathSeparator, builder::addAnalyzedAnnotatedApiDirs);
 
-        String writeAnalyzedDir = cmd.getOptionValue(WRITE_ANALYZED_ANNOTATED_API_DIR);
-        builder.setAnalyzedAnnotatedApiTargetDirectory(writeAnalyzedDir);
+        String writeAnalyzedDir = cmd.getOptionValue(ANALYZED_ANNOTATED_API_TARGET_DIR);
+        builder.setAnalyzedAnnotatedApiTargetDir(writeAnalyzedDir);
 
-        String writeDir = cmd.getOptionValue(WRITE_ANNOTATED_API_DIR);
-        builder.setAnnotatedApiTargetDirectory(writeDir);
+        String writeDir = cmd.getOptionValue(ANNOTATED_API_TARGET_DIR);
+        builder.setAnnotatedApiTargetDir(writeDir);
 
-        String targetPackage = cmd.getOptionValue(WRITE_ANNOTATED_API_TARGET_PACKAGE);
+        String targetPackage = cmd.getOptionValue(ANNOTATED_API_TARGET_PACKAGE);
         builder.setAnnotatedApiTargetPackage(targetPackage);
 
-        String[] writePackages = cmd.getOptionValues(WRITE_ANNOTATED_API_PACKAGES);
+        String[] writePackages = cmd.getOptionValues(ANNOTATED_API_PACKAGES);
         splitAndAdd(writePackages, COMMA, builder::addAnnotatedApiPackages);
         return builder.build();
     }

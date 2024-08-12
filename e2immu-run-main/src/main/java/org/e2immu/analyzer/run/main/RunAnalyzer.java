@@ -1,25 +1,20 @@
 package org.e2immu.analyzer.run.main;
 
-import ch.qos.logback.classic.Level;
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.shallow.analyzer.*;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
 import org.e2immu.language.inspection.api.parser.Summary;
-import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
 import org.e2immu.util.internal.util.Trie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RunAnalyzer implements Runnable {
@@ -38,71 +33,100 @@ public class RunAnalyzer implements Runnable {
 
     @Override
     public void run() {
-        AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-        if (ac.annotatedApiTargetDirectory() != null) {
-            runComposer();
-            return;
-        }
-        if (ac.analyzedAnnotatedApiTargetDirectory() != null) {
-            runShallowAnalyzer();
-            return;
-        }
-        // start parsing, then run analyzer
-    }
-
-    private void runShallowAnalyzer() {
-        AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-        AnnotatedApiParser annotatedApiParser = new AnnotatedApiParser();
         try {
-            annotatedApiParser.initialize(configuration.inputConfiguration(), ac);
-            LOGGER.info("AAPI parser finds {} types", annotatedApiParser.types().size());
-            ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser);
-            Trie<TypeInfo> trie = new Trie<>();
-            List<TypeInfo> types = shallowAnalyzer.go();
-            LOGGER.info("Shallow analyzer found {} types", types.size());
-            annotatedApiParser.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
-            WriteAnalysis writeAnalysis = new WriteAnalysis();
-            writeAnalysis.write(ac.analyzedAnnotatedApiTargetDirectory(), trie);
+            AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
+            if (ac.annotatedApiTargetDir() != null) {
+                runComposer();
+                return;
+            }
+            if (ac.analyzedAnnotatedApiTargetDir() != null) {
+                runShallowAnalyzer();
+                return;
+            }
+            runAnalyzer();
         } catch (IOException ioe) {
             ioe.printStackTrace();
             LOGGER.error("Caught IO exception: {}", ioe.getMessage());
             exitValue = 1;
         }
+    }
+
+    private void runAnalyzer() throws IOException {
+        JavaInspector javaInspector = new JavaInspectorImpl();
+
+        javaInspector.initialize(configuration.inputConfiguration());
+        Summary summary = javaInspector.parse(false);
+        if (summary.haveErrors()) {
+            LOGGER.error("Have parsing errors, bailing out");
+            return;
+        }
+        List<String> analysisSteps = configuration.generalConfiguration().analysisSteps();
+        if (analysisSteps.size() == 1 && "none".equalsIgnoreCase(analysisSteps.get(0))) {
+            return;
+        }
+        boolean empty = analysisSteps.isEmpty();
+        if (empty || analysisSteps.contains("hc")) {
+            LOGGER.info("Computing hidden content for {} types", summary.types().size());
+        }
+
+        // write results
+        String targetDir = configuration.generalConfiguration().analysisResultsDir();
+        if (targetDir != null && !"none".equalsIgnoreCase(targetDir)) {
+            Trie<TypeInfo> trie = new Trie<>();
+            LOGGER.info("Writing results for {} types to {}", summary.types().size(), targetDir);
+            summary.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
+            WriteAnalysis writeAnalysis = new WriteAnalysis();
+            writeAnalysis.write(targetDir, trie);
+        } else {
+            LOGGER.warn("Not writing out results, " + Main.ANALYSIS_RESULTS_DIR + " is empty");
+        }
+    }
+
+    private void runShallowAnalyzer() throws IOException {
+        AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
+        AnnotatedApiParser annotatedApiParser = new AnnotatedApiParser();
+
+        annotatedApiParser.initialize(configuration.inputConfiguration(), ac);
+        LOGGER.info("AAPI parser finds {} types", annotatedApiParser.types().size());
+        ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser);
+        Trie<TypeInfo> trie = new Trie<>();
+        List<TypeInfo> types = shallowAnalyzer.go();
+        LOGGER.info("Shallow analyzer found {} types", types.size());
+        annotatedApiParser.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
+        WriteAnalysis writeAnalysis = new WriteAnalysis();
+        writeAnalysis.write(ac.analyzedAnnotatedApiTargetDir(), trie);
+
         LOGGER.info("End of e2immu main, AAPI->AAAPI shallow analyzer.");
     }
 
-    private void runComposer() {
+    private void runComposer() throws IOException {
         JavaInspector javaInspector = new JavaInspectorImpl();
-        try {
-            javaInspector.initialize(configuration.inputConfiguration());
 
-            AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-            String destinationPackage = ac.annotatedApiTargetPackage() == null ? "" : ac.annotatedApiTargetPackage();
-            Predicate<Info> filter;
-            if (ac.annotatedApiPackages().isEmpty()) {
-                filter = w -> true;
-                LOGGER.info("No filter.");
-            } else {
-                filter = new PackageFilter(ac.annotatedApiPackages());
-                LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
-            }
-            Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
-            List<TypeInfo> compiledPrimaryTypes = javaInspector.compiledTypesManager()
-                    .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
-            LOGGER.info("Loaded {} compiled primary types", compiledPrimaryTypes.size());
+        javaInspector.initialize(configuration.inputConfiguration());
 
-            Summary summary = javaInspector.parse(true);
-            Collection<TypeInfo> sourcePrimaryTypes = summary.types();
-            LOGGER.info("Parsed {} primary source types", sourcePrimaryTypes.size());
-
-            List<TypeInfo> primaryTypes = Stream.concat(compiledPrimaryTypes.stream(), sourcePrimaryTypes.stream()).toList();
-            Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
-            composer.write(apiTypes, ac.annotatedApiTargetDirectory());
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-            LOGGER.error("Caught IO exception: {}", ioe.getMessage());
-            exitValue = 1;
+        AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
+        String destinationPackage = ac.annotatedApiTargetPackage() == null ? "" : ac.annotatedApiTargetPackage();
+        Predicate<Info> filter;
+        if (ac.annotatedApiPackages().isEmpty()) {
+            filter = w -> true;
+            LOGGER.info("No filter.");
+        } else {
+            filter = new PackageFilter(ac.annotatedApiPackages());
+            LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
         }
+        Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
+        List<TypeInfo> compiledPrimaryTypes = javaInspector.compiledTypesManager()
+                .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
+        LOGGER.info("Loaded {} compiled primary types", compiledPrimaryTypes.size());
+
+        Summary summary = javaInspector.parse(true);
+        Collection<TypeInfo> sourcePrimaryTypes = summary.types();
+        LOGGER.info("Parsed {} primary source types", sourcePrimaryTypes.size());
+
+        List<TypeInfo> primaryTypes = Stream.concat(compiledPrimaryTypes.stream(), sourcePrimaryTypes.stream()).toList();
+        Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
+        composer.write(apiTypes, ac.annotatedApiTargetDir());
+
         LOGGER.info("End of e2immu main, AAPI skeleton generation mode.");
     }
 

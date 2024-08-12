@@ -20,10 +20,9 @@ public class TestRunShallowAnalyzer {
     private static final Logger LOGGER = LoggerFactory.getLogger(TestRunShallowAnalyzer.class);
 
     @BeforeAll
-    public static void beforeAll() throws IOException {
+    public static void beforeAll() {
         ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)).setLevel(Level.INFO);
         ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("org.e2immu.analyzer.shallow")).setLevel(Level.DEBUG);
-
     }
 
     @Test
@@ -47,8 +46,8 @@ public class TestRunShallowAnalyzer {
                 "--classpath=" + JavaInspectorImpl.JAR_WITH_PATH_PREFIX_DOUBLE_COLON + "ch/qos/logback/core",
                 "--source=" + aapiSources.getPath(),
                 "--source-packages=org.e2immu.analyzer.shallow.aapi.log",
-                "--analyzed-annotated-api=src/test/resources/json",
-                "--write-analyzed-annotated-api-dir=" + file.getAbsolutePath()
+                "--analyzed-annotated-api-dirs=src/test/resources/json",
+                "--analyzed-annotated-api-target-dir=" + file.getAbsolutePath()
         });
         assertTrue(file.canRead());
 

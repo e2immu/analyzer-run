@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public record GeneralConfiguration(boolean incrementalAnalysis,
+                                   String analysisResultsDir,
                                    List<String> analysisSteps,
                                    List<String> debugTargets,
                                    boolean quiet,
@@ -16,6 +17,7 @@ public record GeneralConfiguration(boolean incrementalAnalysis,
         private final List<String> debugTargets = new ArrayList<>();
         private boolean quiet;
         private boolean parallel;
+        private String analysisResultsDir;
 
         public Builder setIncrementalAnalysis(boolean incrementalAnalysis) {
             this.incrementalAnalysis = incrementalAnalysis;
@@ -42,8 +44,13 @@ public record GeneralConfiguration(boolean incrementalAnalysis,
             return this;
         }
 
+        public Builder setAnalysisResultsDir(String analysisResultsDir) {
+            this.analysisResultsDir = analysisResultsDir;
+            return this;
+        }
+
         public GeneralConfiguration build() {
-            return new GeneralConfiguration(incrementalAnalysis, List.copyOf(analysisSteps),
+            return new GeneralConfiguration(incrementalAnalysis, analysisResultsDir, List.copyOf(analysisSteps),
                     List.copyOf(debugTargets), quiet, parallel);
         }
     }

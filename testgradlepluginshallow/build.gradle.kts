@@ -61,7 +61,7 @@ e2immu {
     // the following directory does not exist, so we're working with the 2 test sources only
     sourcePackages = "org.e2immu.testpackages"
     testSourcePackages = "org.e2immu.testwrite"
-    writeAnalyzedAnnotatedAPIDir = "/tmp/testWriteAnalyzedAnnotatedAPIDir"
+    analyzedAnnotatedApiTargetDir = "/tmp/testWriteAnalyzedAnnotatedAPIDir"
     analyzedAnnotatedApiDirs = "testgradlepluginshallow/src/main/resources/json"
 }
 

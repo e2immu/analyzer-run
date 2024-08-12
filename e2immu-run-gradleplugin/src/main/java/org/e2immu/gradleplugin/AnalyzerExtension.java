@@ -24,6 +24,7 @@ public class AnalyzerExtension {
 
     /* GeneralConfiguration */
     public boolean incrementalAnalysis;
+    public String analysisResultsDir;
     public boolean parallel;
     public String analysisSteps;
     public boolean quiet;
@@ -39,11 +40,11 @@ public class AnalyzerExtension {
     // use case 1
     public String analyzedAnnotatedApiDirs;
     // use case 2
-    public String writeAnalyzedAnnotatedAPIDir;
+    public String analyzedAnnotatedApiTargetDir;
     // use case 3
-    public String writeAnnotatedAPIDir;
-    public String writeAnnotatedAPIPackages;
-    public String writeAnnotatedAPITargetPackage;
+    public String annotatedApiTargetDir;
+    public String annotatedApiPackages;
+    public String annotatedApiTargetPackage;
 
     // actions
     public String action;

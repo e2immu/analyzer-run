@@ -1,5 +1,7 @@
 package org.e2immu.analyzer.run.main;
 
+import ch.qos.logback.classic.Level;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestRunComposer {
     private static final Logger LOGGER = LoggerFactory.getLogger(TestRunComposer.class);
 
+    @BeforeAll
+    public static void beforeAll() {
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)).setLevel(Level.INFO);
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("org.e2immu.analyzer.shallow")).setLevel(Level.DEBUG);
+    }
+
     @Test
     public void test() {
         File file = new File("build/test-aapi-skeleton");
@@ -21,9 +29,9 @@ public class TestRunComposer {
         Main.main(new String[]{
                 "--classpath=jmods/java.base.jmod",
                 "--source=none",
-                "--write-annotated-api-packages=java.util.",
-                "--write-annotated-api-target-package=org.e2immu.aapi",
-                "--write-annotated-api-dir=" + file.getAbsolutePath()
+                "--annotated-api-packages=java.util.",
+                "--annotated-api-target-package=org.e2immu.aapi",
+                "--annotated-api-target-dir=" + file.getAbsolutePath()
         });
         assertTrue(file.canRead());
         File pkg = new File(file, "org/e2immu/aapi");

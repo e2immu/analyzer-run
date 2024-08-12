@@ -15,7 +15,6 @@
 package org.e2immu.gradleplugin;
 
 import org.e2immu.analyzer.run.main.Main;
-import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
 import org.e2immu.util.internal.util.GradleConfiguration;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -104,6 +103,15 @@ public record AnalyzerPropertyComputer(
     private void detectProperties(Project project, Map<String, Object> properties, AnalyzerExtension extension) {
         // general
         properties.put(Main.INCREMENTAL_ANALYSIS, extension.incrementalAnalysis);
+        String analysisResultsDir;
+        if (extension.analysisResultsDir != null) {
+            analysisResultsDir = extension.analysisResultsDir;
+        } else {
+            // default value: "${build.dir}/e2immu"
+            File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
+            analysisResultsDir = new File(buildDir, "e2immu").getAbsolutePath();
+        }
+        properties.put(Main.ANALYSIS_RESULTS_DIR, analysisResultsDir);
         properties.put(Main.PARALLEL, extension.parallel);
         properties.put(Main.ANALYSIS_STEPS, extension.analysisSteps);
         properties.put(Main.DEBUG, extension.debugTargets);
@@ -123,22 +131,22 @@ public record AnalyzerPropertyComputer(
 
         // Annotated API
         // use case 1
-        if(extension.analyzedAnnotatedApiDirs != null) {
-            properties.put(Main.ANALYZED_ANNOTATED_API, extension.analyzedAnnotatedApiDirs);
+        if (extension.analyzedAnnotatedApiDirs != null) {
+            properties.put(Main.ANALYZED_ANNOTATED_API_DIRS, extension.analyzedAnnotatedApiDirs);
         }
         // use case 2
-        if(extension.writeAnalyzedAnnotatedAPIDir != null) {
-            properties.put(Main.WRITE_ANALYZED_ANNOTATED_API_DIR, extension.writeAnalyzedAnnotatedAPIDir);
+        if (extension.analyzedAnnotatedApiTargetDir != null) {
+            properties.put(Main.ANALYZED_ANNOTATED_API_TARGET_DIR, extension.analyzedAnnotatedApiTargetDir);
         }
         // use case 3
-        if(extension.writeAnnotatedAPIDir != null) {
-            properties.put(Main.WRITE_ANNOTATED_API_DIR, extension.writeAnnotatedAPIDir);
+        if (extension.annotatedApiTargetDir != null) {
+            properties.put(Main.ANNOTATED_API_TARGET_DIR, extension.annotatedApiTargetDir);
         }
-        if(extension.writeAnnotatedAPITargetPackage != null) {
-            properties.put(Main.WRITE_ANNOTATED_API_TARGET_PACKAGE, extension.writeAnnotatedAPITargetPackage);
+        if (extension.annotatedApiTargetPackage != null) {
+            properties.put(Main.ANNOTATED_API_TARGET_PACKAGE, extension.annotatedApiTargetPackage);
         }
-        if(extension.writeAnnotatedAPIPackages != null) {
-            properties.put(Main.WRITE_ANNOTATED_API_PACKAGES, extension.writeAnnotatedAPIPackages);
+        if (extension.annotatedApiPackages != null) {
+            properties.put(Main.ANNOTATED_API_PACKAGES, extension.annotatedApiPackages);
         }
 
         // actions

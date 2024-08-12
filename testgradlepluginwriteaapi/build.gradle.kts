@@ -58,9 +58,9 @@ project.group = "io.codelaser.build"
 e2immu {
     jmods = "java.base.jmod"
     debugTargets = "classpath"
-    writeAnnotatedAPIDir = "/tmp/testWriteAnnotatedAPIDir"
-    writeAnnotatedAPIPackages = "java.util.,com.foo"
-    writeAnnotatedAPITargetPackage = "org.e2immu.testwrite"
+    annotatedApiTargetDir = "/tmp/testWriteAnnotatedAPIDir"
+    annotatedApiPackages = "java.util.,com.foo"
+    annotatedApiTargetPackage = "org.e2immu.testwrite"
 }
 
 // no logic for publishing!
