@@ -6,7 +6,6 @@ import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.shallow.analyzer.*;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
-import org.e2immu.language.cst.impl.analysis.PropertyImpl;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
 import org.e2immu.language.inspection.api.parser.Summary;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
@@ -14,7 +13,6 @@ import org.e2immu.util.internal.util.Trie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -57,17 +55,8 @@ public class RunAnalyzer implements Runnable {
     private void runAnalyzer() throws IOException {
         JavaInspector javaInspector = new JavaInspectorImpl();
         javaInspector.initialize(configuration.inputConfiguration());
-
         AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-        for (String dir : ac.analyzedAnnotatedApiDirs()) {
-            File directory = new File(dir);
-            if (directory.canRead()) {
-                new Load().go(javaInspector, directory);
-                LOGGER.info("Read json files in AAAPI {}", directory.getAbsolutePath());
-            } else {
-                LOGGER.warn("Path '{}' is not a directory containing analyzed annotated API files", directory);
-            }
-        }
+        new LoadAnalyzedAnnotatedAPI().go(javaInspector, ac);
 
         Summary summary = javaInspector.parse(false);
         if (summary.haveErrors()) {
