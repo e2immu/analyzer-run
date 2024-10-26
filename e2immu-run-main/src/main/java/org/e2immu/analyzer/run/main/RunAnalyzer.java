@@ -64,7 +64,7 @@ public class RunAnalyzer implements Runnable {
             return;
         }
         List<String> analysisSteps = configuration.generalConfiguration().analysisSteps();
-        if (analysisSteps.size() == 1 && "none".equalsIgnoreCase(analysisSteps.get(0))) {
+        if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.get(0))) {
             return;
         }
         boolean empty = analysisSteps.isEmpty();
@@ -75,7 +75,7 @@ public class RunAnalyzer implements Runnable {
                 typeInfo.recursiveSubTypeStream().forEach(st -> {
                     HiddenContentTypes stHct = chc.compute(st);
                     st.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, stHct);
-                    st.methodAndConstructorStream().forEach(m -> {
+                    st.constructorAndMethodStream().forEach(m -> {
                         HiddenContentTypes mHct = chc.compute(stHct, m);
                         m.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, mHct);
                     });
@@ -85,7 +85,7 @@ public class RunAnalyzer implements Runnable {
 
         // write results
         String targetDir = configuration.generalConfiguration().analysisResultsDir();
-        if (targetDir != null && !"none".equalsIgnoreCase(targetDir)) {
+        if (targetDir != null && !Main.AS_NONE.equalsIgnoreCase(targetDir)) {
             Trie<TypeInfo> trie = new Trie<>();
             LOGGER.info("Writing results for {} types to {}", summary.types().size(), targetDir);
             summary.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));

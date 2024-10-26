@@ -38,6 +38,12 @@ public class Main {
     public static final String SOURCE_ENCODING = "source-encoding";
     public static final String INCREMENTAL_ANALYSIS = "incremental-analysis";
     public static final String ANALYSIS_STEPS = "analysis-steps";
+
+    public static final String AS_NONE = "none";
+    public static final String AS_PREP = "prep";
+    public static final String AS_ANALYSIS_ORDER = "analyis-order";
+    public static final String AS_MODIFICATION = "modification";
+
     public static final String ANALYSIS_RESULTS_DIR = "analysis-results-dir";
     public static final String DEBUG = "debug";
 
@@ -163,7 +169,17 @@ public class Main {
         options.addOption(Option.builder().longOpt(ANALYSIS_STEPS).hasArg().argName("STEPS")
                 .desc("""
                         Provide an alternative list of analysis steps, separated by comma, or with multiple values \
-                        of this property. Choose from: X Y Z
+                        of this property. Choose from:
+                         - 'none': must be present as the only one.
+                         - 'prep' runs the prep-analyzer:
+                              hidden content types, hidden content selector,
+                              variable data, part of construction, final fields,
+                              analysis order
+                         - 'analysis-order' implies prep, and prints out the order
+                         - 'modification' runs
+                              linked variables, static assignments,
+                              fluent, identity,
+                              modification, independence, immutability.
                         """).build());
         options.addOption(Option.builder().longOpt(ANALYSIS_RESULTS_DIR).hasArg().argName("DIR")
                 .desc("""
