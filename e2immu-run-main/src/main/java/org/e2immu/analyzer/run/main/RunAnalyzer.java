@@ -89,7 +89,7 @@ public class RunAnalyzer implements Runnable {
             Trie<TypeInfo> trie = new Trie<>();
             LOGGER.info("Writing results for {} types to {}", summary.types().size(), targetDir);
             summary.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
-            WriteAnalysis writeAnalysis = new WriteAnalysis();
+            WriteAnalysis writeAnalysis = new WriteAnalysis(javaInspector.runtime(), javaInspector.packageToInputPath());
             writeAnalysis.write(targetDir, trie);
         } else {
             LOGGER.warn("Not writing out results, " + Main.ANALYSIS_RESULTS_DIR + " is empty");
@@ -107,7 +107,8 @@ public class RunAnalyzer implements Runnable {
         List<TypeInfo> types = shallowAnalyzer.go();
         LOGGER.info("Shallow analyzer found {} types", types.size());
         annotatedApiParser.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
-        WriteAnalysis writeAnalysis = new WriteAnalysis();
+        WriteAnalysis writeAnalysis = new WriteAnalysis(annotatedApiParser.runtime(),
+                annotatedApiParser.javaInspector().packageToInputPath());
         writeAnalysis.write(ac.analyzedAnnotatedApiTargetDir(), trie);
 
         LOGGER.info("End of e2immu main, AAPI->AAAPI shallow analyzer.");
@@ -128,7 +129,8 @@ public class RunAnalyzer implements Runnable {
             filter = new PackageFilter(ac.annotatedApiPackages());
             LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
         }
-        Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
+        Composer composer = new Composer(javaInspector.runtime(), destinationPackage, null,
+                null, javaInspector.packageToInputPath(), filter);
         List<TypeInfo> compiledPrimaryTypes = javaInspector.compiledTypesManager()
                 .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
         LOGGER.info("Loaded {} compiled primary types", compiledPrimaryTypes.size());
@@ -139,7 +141,7 @@ public class RunAnalyzer implements Runnable {
 
         List<TypeInfo> primaryTypes = Stream.concat(compiledPrimaryTypes.stream(), sourcePrimaryTypes.stream()).toList();
         Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
-        composer.write(apiTypes, ac.annotatedApiTargetDir());
+        composer.write(apiTypes, ac.annotatedApiTargetDir(), () -> null);
 
         LOGGER.info("End of e2immu main, AAPI skeleton generation mode.");
     }
