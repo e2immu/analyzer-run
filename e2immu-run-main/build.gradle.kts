@@ -19,6 +19,7 @@ plugins {
 }
 
 group = "org.e2immu"
+version = "0.0.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -61,7 +62,7 @@ dependencies {
     implementation("org.e2immu:e2immu-modification-prepwork:some.version")
     implementation("org.e2immu:e2immu-modification-linkedvariables:some.version")
 
-    implementation("org.e2immu:e2immu-run-config:some.version")
+    implementation("org.e2immu:e2immu-run-config:0.0.1")
 
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("commons-cli:commons-cli:1.4")

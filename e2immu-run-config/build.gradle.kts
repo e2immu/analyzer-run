@@ -19,6 +19,7 @@ plugins {
 }
 
 group = "org.e2immu"
+version = "0.0.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

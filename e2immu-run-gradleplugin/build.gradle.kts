@@ -49,8 +49,8 @@ dependencies {
     implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
     implementation("org.e2immu:e2immu-modification-prepwork:some.version")
 
-    implementation("org.e2immu:e2immu-run-config:some.version")
-    implementation("org.e2immu:e2immu-run-main:some.version")
+    implementation("org.e2immu:e2immu-run-config:0.0.1")
+    implementation("org.e2immu:e2immu-run-main:0.0.1")
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("org.slf4j:slf4j-api:2.0.7")
