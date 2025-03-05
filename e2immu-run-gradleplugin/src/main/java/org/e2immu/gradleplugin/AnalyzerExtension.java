@@ -19,6 +19,7 @@ import org.gradle.api.Action;
 public class AnalyzerExtension {
     public static final String ANALYZER_EXTENSION_NAME = "e2immu";
     public static final String ANALYZER_TASK_NAME = "e2immu-analyzer";
+    public static final String WRITE_INPUT_CONFIGURATION_TASK_NAME = "e2immu-write-input-configuration";
 
     public boolean skipProject;
 

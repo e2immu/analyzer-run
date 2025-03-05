@@ -14,10 +14,13 @@
 
 package org.e2immu.gradleplugin;
 
+import org.e2immu.gradleplugin.task.AnalyzerTask;
+import org.e2immu.gradleplugin.task.WriteInputConfigurationTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.internal.ConventionMapping;
+import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.plugins.JavaPlugin;
@@ -35,10 +38,12 @@ public class AnalyzerPlugin implements Plugin<Project> {
         if (project.getExtensions().findByName(AnalyzerExtension.ANALYZER_EXTENSION_NAME) == null) {
             Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap = new HashMap<>();
             addExtensions(project, actionBroadcastMap);
-            LOGGER.debug("Adding " + AnalyzerExtension.ANALYZER_TASK_NAME + " task to " + project);
-            AnalyzerTask task = project.getTasks().create(AnalyzerExtension.ANALYZER_TASK_NAME, AnalyzerTask.class);
-            task.setDescription("Analyses " + project + " and its sub-projects with the e2immu analyser.");
-            configureTask(task, project, actionBroadcastMap);
+
+            addTask(project, AnalyzerExtension.ANALYZER_TASK_NAME, AnalyzerTask.class,
+                    "Analyses " + project + " and its sub-projects with the e2immu analyser.",
+                    actionBroadcastMap);
+            addTask(project, AnalyzerExtension.WRITE_INPUT_CONFIGURATION_TASK_NAME, WriteInputConfigurationTask.class,
+                    "Writes out the input configuration of the project to a json file", actionBroadcastMap);
         }
     }
 
@@ -51,15 +56,25 @@ public class AnalyzerPlugin implements Plugin<Project> {
         });
     }
 
-    private void configureTask(AnalyzerTask analyzerTask, Project project, Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
-        ConventionMapping conventionMapping = analyzerTask.getConventionMapping();
+    private void addTask(Project project, String name, Class<? extends ConventionTask> clazz, String description,
+                         Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
+        LOGGER.debug("Adding " + name + " task to " + project);
+        ConventionTask task = project.getTasks().create(name, clazz);
+        task.setDescription(description);
+        configureTask(task, project, actionBroadcastMap);
+    }
+
+    private void configureTask(ConventionTask task, Project project, Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
+        ConventionMapping conventionMapping = task.getConventionMapping();
         // this will call the AnalyzerPropertyComputer to populate the properties of the task just before running it
-        conventionMapping.map("properties", () -> new AnalyzerPropertyComputer(actionBroadcastMap, project).computeProperties());
+        conventionMapping.map("properties",
+                () -> new AnalyzerPropertyComputer(actionBroadcastMap, project).computeProperties());
 
         Callable<Iterable<? extends Task>> compileTasks = () -> project.getAllprojects().stream()
-                .filter(p -> p.getPlugins().hasPlugin(JavaPlugin.class) && !p.getExtensions().getByType(AnalyzerExtension.class).skipProject)
+                .filter(p -> p.getPlugins().hasPlugin(JavaPlugin.class)
+                             && !p.getExtensions().getByType(AnalyzerExtension.class).skipProject)
                 .map(p -> p.getTasks().getByName(JavaPlugin.COMPILE_JAVA_TASK_NAME))
                 .collect(Collectors.toList());
-        analyzerTask.dependsOn(compileTasks);
+        task.dependsOn(compileTasks);
     }
 }

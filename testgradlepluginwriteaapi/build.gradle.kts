@@ -3,8 +3,6 @@ plugins {
     id("org.e2immu.analyzer-plugin")
 }
 
-group = "io.codelaser.build"
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

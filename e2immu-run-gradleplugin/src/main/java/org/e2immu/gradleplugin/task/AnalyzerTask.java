@@ -12,13 +12,14 @@
  * License along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.e2immu.gradleplugin;
+package org.e2immu.gradleplugin.task;
 
 
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.run.main.ExecuteAction;
 import org.e2immu.analyzer.run.main.Main;
 import org.e2immu.analyzer.run.main.RunAnalyzer;
+import org.e2immu.gradleplugin.AnalyzerPropertyComputer;
 import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
