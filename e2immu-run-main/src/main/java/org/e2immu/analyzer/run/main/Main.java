@@ -236,18 +236,18 @@ public class Main {
                 .desc("Add a directory where the source files can be found. Use the Java path separator '" +
                       File.pathSeparator + "' to separate directories, " +
                       "or use this options multiple times. Default, when this option is absent, is '"
-                      + InputConfigurationImpl.DEFAULT_SOURCE_DIRS + "'.").build());
+                      + InputConfigurationImpl.MAVEN_MAIN + "'.").build());
 
         options.addOption(Option.builder().longOpt(TEST_SOURCE).hasArg().argName("DIRS")
                 .desc("Add a directory where the test source files can be found. Use the Java path separator '" +
                       File.pathSeparator + "' to separate directories, " +
                       "or use this options multiple times. Default, when this option is absent, is '"
-                      + InputConfigurationImpl.DEFAULT_TEST_SOURCE_DIRS + "'.").build());
+                      + InputConfigurationImpl.MAVEN_TEST + "'.").build());
 
         options.addOption(Option.builder("cp").longOpt(CLASSPATH).hasArg().argName("CLASSPATH")
                 .desc("Add classpath components, separated by the Java path separator '"
                       + File.pathSeparator + "'. Default, when this option is absent, is '"
-                      + Arrays.toString(InputConfigurationImpl.DEFAULT_CLASSPATH) + "'.").build());
+                      + Arrays.toString(InputConfigurationImpl.GRADLE_DEFAULT) + "'.").build());
 
         options.addOption(Option.builder().longOpt(SOURCE_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Restrict the sources parsed to the paths" +

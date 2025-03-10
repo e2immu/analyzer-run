@@ -56,7 +56,7 @@ public class RunAnalyzer implements Runnable {
         JavaInspector javaInspector = new JavaInspectorImpl();
         javaInspector.initialize(configuration.inputConfiguration());
         AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-        new LoadAnalyzedAnnotatedAPI().go(javaInspector, ac);
+        new LoadAnalyzedPackageFiles().go(javaInspector, ac);
 
         JavaInspector.ParseOptions parseOptions = new JavaInspectorImpl.ParseOptionsBuilder().setFailFast(false).build();
         Summary summary = javaInspector.parse(parseOptions);
