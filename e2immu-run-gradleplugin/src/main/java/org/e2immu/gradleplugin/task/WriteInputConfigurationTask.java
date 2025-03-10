@@ -73,7 +73,7 @@ public class WriteInputConfigurationTask extends ConventionTask {
                 .setSourceEncoding(inputConfiguration.sourceEncoding().displayName());
         String project = getProject().getName();
 
-        File gitRootFile = getProject().getRootDir();
+        File gitRootFile = findGitRoot(getProject().getRootDir());
         String gitRoot = gitRootFile.getAbsolutePath();
 
         File buildDocker = new File(buildDir, "docker");
@@ -82,7 +82,7 @@ public class WriteInputConfigurationTask extends ConventionTask {
         }
 
         String buildDockerPath = buildDocker.getAbsolutePath() + "/";
-        String relativeBuildDockerPath = project + buildDockerPath.substring(gitRoot.length());
+        String relativeBuildDockerPath = buildDockerPath.substring(gitRoot.length() + 1);
 
         Set<String> copied = new HashSet<>();
         File dockerFile = new File(buildDocker, DOCKERFILE);
@@ -163,5 +163,16 @@ public class WriteInputConfigurationTask extends ConventionTask {
 
             dockerfileWriter.append("RUN cd ").append(dockerGitDir).append(" && git restore . && git clean -fd .\n");
         }
+    }
+
+    private File findGitRoot(File rootDir) {
+        File current = rootDir;
+        while (!(new File(current, ".git").isDirectory())) {
+            current = current.getParentFile();
+            if ("/".equals(current.getAbsolutePath())) {
+                throw new UnsupportedOperationException("No git root found");
+            }
+        }
+        return current;
     }
 }
