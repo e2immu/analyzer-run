@@ -1,6 +1,7 @@
 package org.e2immu.analyzer.run.main;
 
 import ch.qos.logback.classic.Level;
+import org.e2immu.analyzer.shallow.analyzer.ToolChain;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,10 +41,8 @@ public class TestRunShallowAnalyzer {
         }
         Main.main(new String[]{
                 "--debug=classpath",
-                "--classpath=" + InputConfigurationImpl.DEFAULT_CLASSPATH_STRING,
-                "--classpath=" + JavaInspectorImpl.JAR_WITH_PATH_PREFIX_DOUBLE_COLON + "org/slf4j",
-                "--classpath=" + JavaInspectorImpl.JAR_WITH_PATH_PREFIX_DOUBLE_COLON + "ch/qos/logback/classic",
-                "--classpath=" + JavaInspectorImpl.JAR_WITH_PATH_PREFIX_DOUBLE_COLON + "ch/qos/logback/core",
+                "--classpath=" + String.join(":", InputConfigurationImpl.GRADLE_DEFAULT),
+                "--classpath=" + String.join(":", ToolChain.CLASSPATH_SLF4J_LOGBACK),
                 "--source=" + aapiSources.getPath(),
                 "--source-packages=org.e2immu.analyzer.shallow.aapi.log",
                 "--analyzed-annotated-api-dirs=src/test/resources/json",
