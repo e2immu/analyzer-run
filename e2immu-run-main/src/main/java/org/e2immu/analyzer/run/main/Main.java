@@ -278,8 +278,8 @@ public class Main {
         setSplitStringProperty(kvMap, File.pathSeparator, RUNTIME_CLASSPATH, builder::addRuntimeClassPath);
         setSplitStringProperty(kvMap, File.pathSeparator, TESTS_RUNTIME_CLASSPATH, builder::addTestRuntimeClassPath);
 
-        setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
-        setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
+       // setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
+       // setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
 
         copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
@@ -287,7 +287,7 @@ public class Main {
 
     private static void copyFromGeneralConfiguration(GeneralConfiguration generalConfiguration, InputConfigurationImpl.Builder builder) {
         if (generalConfiguration.debugTargets().contains("classpath")) {
-            builder.setInfoLogClasspath(true);
+         //   builder.setInfoLogClasspath(true);
         }
     }
 
