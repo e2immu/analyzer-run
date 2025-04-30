@@ -1,5 +1,6 @@
 package org.e2immu.analyzer.run.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
 import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
@@ -8,9 +9,13 @@ import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 
 public class Configuration {
+    @JsonProperty
     private final GeneralConfiguration generalConfiguration;
+    @JsonProperty
     private final InputConfiguration inputConfiguration;
+    //@JsonProperty
     private final AnnotatedAPIConfiguration annotatedAPIConfiguration;
+    @JsonProperty
     private final LanguageConfiguration languageConfiguration;
 
     private Configuration(GeneralConfiguration generalConfiguration,

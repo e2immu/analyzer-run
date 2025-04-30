@@ -15,19 +15,23 @@
 package org.e2immu.gradleplugin;
 
 import org.e2immu.analyzer.run.config.GeneralConfiguration;
+import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.analyzer.run.main.Main;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
+import org.e2immu.gradleplugin.inputconfig.ComputeSourceSets;
 import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
 import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
 import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 import org.e2immu.language.inspection.resource.SourceSetImpl;
+import org.e2immu.util.internal.graph.G;
+import org.e2immu.util.internal.graph.op.Linearize;
 import org.e2immu.util.internal.util.GradleConfiguration;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.result.*;
+import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
 import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
@@ -37,6 +41,7 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -55,12 +60,12 @@ public record AnalyzerPropertyComputer(
     private static final Logger LOGGER = Logging.getLogger(AnalyzerPropertyComputer.class);
     public static final String PREFIX = "e2immu-analyser.";
 
-    public static final String DEPENDENCIES = "dependencies";
     public static final String E2IMMU_CONFIGURATION = "configuration.json";
 
     public Map<String, Object> computeProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
         computeProperties(targetProject, properties, "");
+
         return properties;
     }
 
@@ -71,6 +76,12 @@ public record AnalyzerPropertyComputer(
         }
         Map<String, Object> rawProperties = new LinkedHashMap<>();
         org.e2immu.analyzer.run.config.Configuration configuration = computeConfiguration(project, extension);
+        try {
+            String json = JsonStreaming.objectMapper().writeValueAsString(configuration);
+            LOGGER.info("Configuration for project {}: {}", project.getDisplayName(), json);
+        } catch (IOException io) {
+            throw new RuntimeException(io);
+        }
         rawProperties.put(E2IMMU_CONFIGURATION, configuration);
 
         ActionBroadcast<AnalyzerProperties> actionBroadcast = actionBroadcastMap.get(project.getPath());
@@ -84,7 +95,7 @@ public record AnalyzerPropertyComputer(
             addSystemProperties(rawProperties);
         }
         // convert all the properties from subprojects into dot-notated properties
-        flattenProperties(rawProperties, prefix, properties);
+       // flattenProperties(rawProperties, prefix, properties);
 
         LOGGER.debug("Resulting map is " + properties);
 
@@ -130,111 +141,41 @@ public record AnalyzerPropertyComputer(
     }
 
     private InputConfiguration makeInputConfiguration(Project project, AnalyzerExtension extension) {
+        LOGGER.info("Computing input configuration of project {}", project.getDisplayName());
+
         InputConfiguration.Builder builder = new InputConfigurationImpl.Builder();
-        String encoding = detectSourceEncoding(project);
         builder.setAlternativeJREDirectory(extension.jre);
 
         Set<String> excludeFromClasspath = extension.excludeFromClasspath == null || extension.excludeFromClasspath.isBlank() ? Set.of() :
                 Arrays.stream(extension.excludeFromClasspath.split("[;,]\\s*")).collect(Collectors.toUnmodifiableSet());
+        ComputeSourceSets computeSourceSets = new ComputeSourceSets();
+        ComputeSourceSets.Result result = computeSourceSets.compute(project, extension.sourcePackages,
+                extension.testSourcePackages, excludeFromClasspath);
 
-        JavaPluginExtension javaPluginExtension = new DslObject(project).getExtensions().getByType(JavaPluginExtension.class);
-        Map<String, org.e2immu.language.cst.api.element.SourceSet> classPathPartsByName = new HashMap<>();
-        makeSourceSet(javaPluginExtension, extension.sourcePackages, encoding, false)
-                .forEach(set -> {
-                    builder.addSourceSets(set);
-                    classPathPartsByName.put(set.name(), set);
-                });
-        makeSourceSet(javaPluginExtension, extension.testSourcePackages, encoding, true)
-                .forEach(set -> {
-                    builder.addSourceSets(set);
-                    classPathPartsByName.put(set.name(), set);
-                });
-        makeJavaModules(extension.jmods).forEach(set -> {
-            builder.addClassPathParts(set);
-            classPathPartsByName.put(set.name(), set);
-        });
+        /*
+        // at the very end
+        makeJavaModules(extension.jmods).forEach(set -> sourceSetsByName.put(set.name(), set));
 
-        Map<String, Set<String>> dependencyGraph = new HashMap<>();
-        boolean[] both = {false, true};
-        for (boolean test : both) {
-            for (boolean runtimeOnly : both) {
-                makeClassPathParts(project, test, runtimeOnly, classPathPartsByName, dependencyGraph, excludeFromClasspath)
-                        .forEach(builder::addClassPathParts);
+
+        LOGGER.info("Dependency graph: {}", dependencyGraph);
+        G.Builder<String> depGraphBuilder = new G.Builder<>(Long::sum);
+        dependencyGraph.forEach(depGraphBuilder::add);
+        G<String> graph = depGraphBuilder.build();
+        List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
+        LOGGER.info("Linearization: {}", linearization);
+        for (String name : linearization) {
+            Set<org.e2immu.language.cst.api.element.SourceSet> dependencies = dependencyGraph.getOrDefault(name, Set.of())
+                    .stream().map(sourceSetsByName::get).filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
+            org.e2immu.language.cst.api.element.SourceSet sourceSet = sourceSetsByName.get(name);
+            if (sourceSet == null) {
+                LOGGER.warn("Don't know source set {}, known {}", name, sourceSetsByName.keySet());
+            } else {
+                org.e2immu.language.cst.api.element.SourceSet set = sourceSet.withDependencies(dependencies);
+                if (!set.externalLibrary()) builder.addSourceSets(set);
+                else builder.addClassPathParts(set);
             }
-        }
+        }*/
         return builder.build();
-    }
-
-    private List<org.e2immu.language.cst.api.element.SourceSet> makeClassPathParts
-            (Project project,
-             boolean test,
-             boolean runtimeOnly,
-             Map<String, org.e2immu.language.cst.api.element.SourceSet> classPathPartsByName,
-             Map<String, Set<String>> dependencyGraph,
-             Set<String> excludeFromClasspath) {
-        String configurationName = resolvableConfigurationName(test, runtimeOnly);
-        Configuration configuration = project.getConfigurations().getByName(configurationName);
-        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
-
-        for (ResolvedArtifactResult rar : configuration.getIncoming().getArtifacts().getArtifacts()) {
-            if (rar.getVariant().getOwner() instanceof ModuleComponentIdentifier mci) {
-                String description = mci.getGroup() + ":" + mci.getModule() + ":" + mci.getVersion();
-                if (!classPathPartsByName.containsKey(description)) {
-                    File file = rar.getFile();
-                    if (file.canRead() && !excludeFromClasspath.contains(file.getName())
-                        && !excludeFromClasspath.contains(description)
-                        && !excludeFromClasspath.contains(mci.getModule())) {
-                        org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(description, null,
-                                file.toURI(), null, test, true, true, false,
-                                runtimeOnly, null, null);
-                        classPathPartsByName.put(file.getAbsolutePath(), set);
-                        sets.add(set);
-                    }
-                }
-            }
-        }
-        ResolutionResult result = configuration.getIncoming().getResolutionResult();
-        ResolvedComponentResult root = result.getRoot();
-        LOGGER.info("Dependencies of configuration {}", configurationName);
-        traverseDependencies(root, 0, dependencyGraph);
-        return sets;
-    }
-
-    private static String traverseDependencies(ResolvedComponentResult component,
-                                               int depth,
-                                               Map<String, Set<String>> dependencyGraph) {
-        ModuleVersionIdentifier mci = component.getModuleVersion();
-        if (mci != null) {
-            String description = mci.getGroup() + ":" + mci.getModule() + ":" + mci.getVersion();
-            if (!dependencyGraph.containsKey(description)) {
-                LOGGER.info("{} {}", "  ".repeat(depth), description);
-
-                Set<String> dependencies = new HashSet<>();
-                dependencyGraph.put(description, dependencies);
-                for (DependencyResult dr : component.getDependencies()) {
-                    if (dr instanceof ResolvedDependencyResult rdr) {
-                        ResolvedComponentResult selected = rdr.getSelected();
-                        String target = traverseDependencies(selected, depth + 1, dependencyGraph);
-                        if (target != null) {
-                            dependencies.add(target);
-                        }
-                    } else if (dr instanceof UnresolvedDependencyResult udr) {
-                        LOGGER.warn("Failed Gradle resolution: {}: {}", udr.getAttempted().getDisplayName(),
-                                udr.getFailure().getMessage());
-                    }
-                }
-            }
-            return description;
-        }
-        LOGGER.warn("? not an mci");
-        return null;
-    }
-
-    private String resolvableConfigurationName(boolean test, boolean runtimeOnly) {
-        if (test) {
-            return runtimeOnly ? "testRuntimeClasspath" : "testCompileClasspath";
-        }
-        return runtimeOnly ? "runtimeClasspath" : "compileClasspath";
     }
 
     private List<org.e2immu.language.cst.api.element.SourceSet> makeJavaModules(String jmodsString) {
@@ -247,33 +188,6 @@ public record AnalyzerPropertyComputer(
                         null, false, true, true, true, false,
                         null, null);
                 sets.add(set);
-            }
-        }
-        return sets;
-    }
-
-    private List<org.e2immu.language.cst.api.element.SourceSet> makeSourceSet(JavaPluginExtension javaPluginExtension,
-                                                                              String restrictTo,
-                                                                              String encodingString,
-                                                                              boolean test) {
-        Set<String> restrictToPackages = restrictTo == null || restrictTo.isBlank() ? null :
-                Arrays.stream(restrictTo.split("[,;]\\s*"))
-                        .filter(s -> !s.isBlank())
-                        .collect(Collectors.toUnmodifiableSet());
-        Charset sourceEncoding = encodingString == null ? null : Charset.forName(encodingString);
-        String sourceSetName = test ? "test" : "main";
-        SourceSet gradleSet = javaPluginExtension.getSourceSets().getAt(sourceSetName);
-        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
-        int cnt = 0;
-        for (File file : gradleSet.getAllJava().getSrcDirs()) {
-            if (file.canRead()) {
-                Path path = file.toPath();
-                String name = sourceSetName + (cnt == 0 ? "" : "" + cnt);
-                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(name, path, path.toUri(),
-                        sourceEncoding, test, false, false, false, false,
-                        restrictToPackages, null);
-                sets.add(set);
-                ++cnt;
             }
         }
         return sets;
@@ -323,30 +237,6 @@ public record AnalyzerPropertyComputer(
         return generalMap;
     }
 
-    private static String getOrDefault(String property, String defaultValue) {
-        return property == null || property.isBlank() ? defaultValue : property;
-    }
-
-    private static String detectSourceEncoding(Project project) {
-        AtomicReference<String> encodingRef = new AtomicReference<>();
-        project.getTasks().withType(JavaCompile.class, compile -> {
-            String encoding = compile.getOptions().getEncoding();
-            if (encoding != null) {
-                encodingRef.set(encoding);
-            }
-        });
-        return encodingRef.get();
-    }
-
-    private static final String[] RESOLVABLE_CONFIGURATIONS =
-            Arrays.stream(GradleConfiguration.values()).filter(c -> c.transitive)
-                    .map(c -> c.gradle).toArray(String[]::new);
-
-    private static final Map<String, String> CONFIG_SHORTHAND =
-            Arrays.stream(GradleConfiguration.values()).collect(Collectors.toUnmodifiableMap(
-                    c -> c.gradle, c -> c.abbrev
-            ));
-
     private static void addSystemProperties(Map<String, Object> properties) {
         for (Map.Entry<Object, Object> entry : System.getProperties().entrySet()) {
             String key = entry.getKey().toString();
@@ -358,14 +248,4 @@ public record AnalyzerPropertyComputer(
         }
     }
 
-    private static void flattenProperties(Map<String, Object> rawProperties,
-                                          String projectPrefix,
-                                          Map<String, Object> properties) {
-        for (Map.Entry<String, Object> entry : rawProperties.entrySet()) {
-            if (entry.getValue() != null) {
-                String key = projectPrefix.isEmpty() ? entry.getKey() : (projectPrefix + "." + entry.getKey());
-                properties.put(key, entry.getValue().toString());
-            }
-        }
-    }
 }

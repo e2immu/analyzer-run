@@ -17,21 +17,18 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 public class TestStreaming {
     @Test
     public void test() throws JsonProcessingException {
         ObjectMapper objectMapper = JsonStreaming.objectMapper();
-        SourceSet sourceSet = new SourceSetImpl("abc", Path.of("/home/x"), URI.create("file:/home/x"),
+        SourceSet sourceSet = new SourceSetImpl("abc", List.of(Path.of("/home/x")), URI.create("file:/home/x"),
                 StandardCharsets.UTF_8, true, false, false, false, false,
                 Set.of("a.b.c"), Set.of());
         FingerPrint fingerPrint1 = MD5FingerPrint.compute("hello");
         Assertions.assertEquals("XUFAKrxLKna5cZ2REBfFkg==", fingerPrint1.toString());
         sourceSet.setFingerPrint(fingerPrint1);
 
-        SourceSet sourceSet2 = new SourceSetImpl("def", Path.of("/home/y"), URI.create("file:/home/y"),
+        SourceSet sourceSet2 = new SourceSetImpl("def", List.of(Path.of("/home/y")), URI.create("file:/home/y"),
                 StandardCharsets.UTF_8, true, false, false, false, false,
                 Set.of(), Set.of(sourceSet));
         sourceSet2.setAnalysisFingerPrint(MD5FingerPrint.compute("there"));
