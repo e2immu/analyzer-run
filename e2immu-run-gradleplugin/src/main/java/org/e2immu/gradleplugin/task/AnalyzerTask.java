@@ -52,17 +52,7 @@ public class AnalyzerTask extends ConventionTask {
             }
         }
         Configuration configuration = Main.fromPropertyMap(properties);
-        String action = properties.get(Main.ACTION);
-        if (action != null) {
-            String ap = properties.get(Main.ACTION_PARAMETER);
-            String[] actionParameters = ap == null ? new String[0] : ap.split(AnalyzerPropertyComputer.M_A_G_I_C);
-            int exitValue = ExecuteAction.run(action, actionParameters, configuration);
-            if (exitValue != 0) {
-                throw new RuntimeException("Analyser exited with error value " + exitValue + ": "
-                                           + Main.exitMessage(exitValue));
-            }
-            return;
-        }
+
         LOGGER.debug("Configuration:\n{}", configuration);
 
         RunAnalyzer runAnalyser = new RunAnalyzer(configuration);
