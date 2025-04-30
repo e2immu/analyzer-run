@@ -14,7 +14,14 @@
 
 package org.e2immu.gradleplugin;
 
+import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.run.main.Main;
+import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
+import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
+import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
+import org.e2immu.language.inspection.api.resource.InputConfiguration;
+import org.e2immu.language.inspection.resource.InputConfigurationImpl;
+import org.e2immu.language.inspection.resource.SourceSetImpl;
 import org.e2immu.util.internal.util.GradleConfiguration;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -22,16 +29,21 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ModuleDependency;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
-import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -44,11 +56,9 @@ public record AnalyzerPropertyComputer(
 
     private static final Logger LOGGER = Logging.getLogger(AnalyzerPropertyComputer.class);
     public static final String PREFIX = "e2immu-analyser.";
-    // used for round trip String[] -> String -> String[]; TODO this should be done in a better way
-    public static final String M_A_G_I_C = "__M_A_G_I_C__";
 
     public static final String DEPENDENCIES = "dependencies";
-
+    public static final String E2IMMU_CONFIGURATION = "configuration.json";
 
     public Map<String, Object> computeProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
@@ -62,7 +72,8 @@ public record AnalyzerPropertyComputer(
             return;
         }
         Map<String, Object> rawProperties = new LinkedHashMap<>();
-        detectProperties(project, rawProperties, extension);
+        org.e2immu.analyzer.run.config.Configuration configuration = computeConfiguration(project, extension);
+        rawProperties.put(E2IMMU_CONFIGURATION, configuration);
 
         ActionBroadcast<AnalyzerProperties> actionBroadcast = actionBroadcastMap.get(project.getPath());
         if (actionBroadcast != null) {
@@ -100,9 +111,140 @@ public record AnalyzerPropertyComputer(
         }
     }
 
-    private void detectProperties(Project project, Map<String, Object> properties, AnalyzerExtension extension) {
+    private org.e2immu.analyzer.run.config.Configuration computeConfiguration(Project project, AnalyzerExtension extension) {
+        LanguageConfiguration languageConfiguration = new LanguageConfigurationImpl(true);
+
         // general
-        properties.put(Main.INCREMENTAL_ANALYSIS, extension.incrementalAnalysis);
+        Map<String, String> generalMap = makeGeneralConfigMap(project, extension);
+        GeneralConfiguration generalConfiguration = Main.generalConfiguration(generalMap);
+        // Annotated API
+        Map<String, String> aapiMap = makeAnnotatedAPIMap(extension);
+        AnnotatedAPIConfiguration annotatedAPIConfiguration = Main.annotatedAPIConfiguration(aapiMap);
+        // Input
+        InputConfiguration inputConfiguration = makeInputConfiguration(project, extension);
+
+        return new org.e2immu.analyzer.run.config.Configuration.Builder()
+                .setAnnotatedAPIConfiguration(annotatedAPIConfiguration)
+                .setGeneralConfiguration(generalConfiguration)
+                .setLanguageConfiguration(languageConfiguration)
+                .setInputConfiguration(inputConfiguration)
+                .build();
+    }
+
+    private InputConfiguration makeInputConfiguration(Project project, AnalyzerExtension extension) {
+        InputConfiguration.Builder builder = new InputConfigurationImpl.Builder();
+        String encoding = detectSourceEncoding(project);
+        builder.setAlternativeJREDirectory(extension.jre);
+
+        JavaPluginExtension javaPluginExtension = new DslObject(project).getExtensions().getByType(JavaPluginExtension.class);
+        makeSourceSet(javaPluginExtension, extension.sourcePackages, encoding, false)
+                .forEach(builder::addSourceSets);
+        makeSourceSet(javaPluginExtension, extension.testSourcePackages, encoding, true)
+                .forEach(builder::addSourceSets);
+        makeJavaModules(extension.jmods).forEach(builder::addClassPathParts);
+        Map<String, org.e2immu.language.cst.api.element.SourceSet> classPathPartsByName = new HashMap<>();
+        boolean[] both = {false, true};
+        for (boolean test : both) {
+            for (boolean runtimeOnly : both) {
+                makeClassPathParts(javaPluginExtension, test, runtimeOnly, classPathPartsByName)
+                        .forEach(builder::addClassPathParts);
+            }
+        }
+        return builder.build();
+    }
+
+    private List<org.e2immu.language.cst.api.element.SourceSet> makeClassPathParts
+            (JavaPluginExtension javaPluginExtension,
+             boolean test,
+             boolean runtimeOnly,
+             Map<String, org.e2immu.language.cst.api.element.SourceSet> classPathPartsByName) {
+        String sourceSetName = test ? "test" : "main";
+        SourceSet gradleSet = javaPluginExtension.getSourceSets().getAt(sourceSetName);
+        FileCollection files = runtimeOnly ? gradleSet.getRuntimeClasspath() : gradleSet.getCompileClasspath();
+        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
+        for (File file : files) {
+            String absolutePath = file.getAbsolutePath();
+            if (file.canRead() && !classPathPartsByName.containsKey(absolutePath)) {
+                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(absolutePath, null,
+                        file.toURI(), null, test, true, true, false,
+                        runtimeOnly, null, null);
+                classPathPartsByName.put(absolutePath, set);
+                sets.add(set);
+            }
+        }
+        return sets;
+    }
+
+    private List<org.e2immu.language.cst.api.element.SourceSet> makeJavaModules(String jmodsString) {
+        if (jmodsString == null || jmodsString.isBlank()) return List.of();
+        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
+        for (String jmod : jmodsString.split("[,;]\\s*")) {
+            if (!jmod.isBlank()) {
+                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(jmod, null,
+                        URI.create("jmod:" + jmod),
+                        null, false, true, true, true, false,
+                        null, null);
+                sets.add(set);
+            }
+        }
+        return sets;
+    }
+
+    private List<org.e2immu.language.cst.api.element.SourceSet> makeSourceSet(JavaPluginExtension javaPluginExtension,
+                                                                              String restrictTo,
+                                                                              String encodingString,
+                                                                              boolean test) {
+        Set<String> restrictToPackages = restrictTo == null || restrictTo.isBlank() ? null :
+                Arrays.stream(restrictTo.split("[,;]\\s*"))
+                        .filter(s -> !s.isBlank())
+                        .collect(Collectors.toUnmodifiableSet());
+        Charset sourceEncoding = encodingString == null ? null : Charset.forName(encodingString);
+        String sourceSetName = test ? "test" : "main";
+        SourceSet gradleSet = javaPluginExtension.getSourceSets().getAt(sourceSetName);
+        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
+        int cnt = 0;
+        for (File file : gradleSet.getAllJava().getSrcDirs()) {
+            if (file.canRead()) {
+                Path path = file.toPath();
+                String name = sourceSetName + (cnt == 0 ? "" : "" + cnt);
+                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(name, path, path.toUri(),
+                        sourceEncoding, test, false, false, false, false,
+                        restrictToPackages, null);
+                sets.add(set);
+                ++cnt;
+            }
+        }
+        return sets;
+    }
+
+    private static Map<String, String> makeAnnotatedAPIMap(AnalyzerExtension extension) {
+        // Annotated API
+        // use case 1
+        Map<String, String> kvMap = new HashMap<>();
+        if (extension.analyzedAnnotatedApiDirs != null) {
+            kvMap.put(Main.ANALYZED_ANNOTATED_API_DIRS, extension.analyzedAnnotatedApiDirs);
+        }
+        // use case 2
+        if (extension.analyzedAnnotatedApiTargetDir != null) {
+            kvMap.put(Main.ANALYZED_ANNOTATED_API_TARGET_DIR, extension.analyzedAnnotatedApiTargetDir);
+        }
+        // use case 3
+        if (extension.annotatedApiTargetDir != null) {
+            kvMap.put(Main.ANNOTATED_API_TARGET_DIR, extension.annotatedApiTargetDir);
+        }
+        if (extension.annotatedApiTargetPackage != null) {
+            kvMap.put(Main.ANNOTATED_API_TARGET_PACKAGE, extension.annotatedApiTargetPackage);
+        }
+        if (extension.annotatedApiPackages != null) {
+            kvMap.put(Main.ANNOTATED_API_PACKAGES, extension.annotatedApiPackages);
+        }
+        return kvMap;
+    }
+
+    private static @NotNull Map<String, String> makeGeneralConfigMap(Project project,
+                                                                     AnalyzerExtension extension) {
+        Map<String, String> generalMap = new HashMap<>();
+        generalMap.put(Main.INCREMENTAL_ANALYSIS, "" + extension.incrementalAnalysis);
         String analysisResultsDir;
         if (extension.analysisResultsDir != null) {
             analysisResultsDir = extension.analysisResultsDir;
@@ -111,64 +253,27 @@ public record AnalyzerPropertyComputer(
             File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
             analysisResultsDir = new File(buildDir, "e2immu").getAbsolutePath();
         }
-        properties.put(Main.ANALYSIS_RESULTS_DIR, analysisResultsDir);
-        properties.put(Main.PARALLEL, extension.parallel);
-        properties.put(Main.ANALYSIS_STEPS, extension.analysisSteps);
-        properties.put(Main.DEBUG, extension.debugTargets);
-        properties.put(Main.QUIET, extension.quiet);
-
-        // input
-        properties.put(Main.SOURCE_PACKAGES, extension.sourcePackages);
-        properties.put(Main.TEST_SOURCE_PACKAGES, extension.testSourcePackages);
-        properties.put(Main.JRE, extension.jre);
-        properties.put(Main.EXCLUDE_FROM_CLASSPATH, extension.excludeFromClasspath);
-
-        project.getPlugins().withType(JavaPlugin.class, javaPlugin -> {
-            boolean hasSource = detectSourceDirsAndJavaClasspath(project, properties, extension.jmods);
-            if (hasSource) {
-                detectSourceEncoding(project, properties);
-            }
-        });
-
-        // Annotated API
-        // use case 1
-        if (extension.analyzedAnnotatedApiDirs != null) {
-            properties.put(Main.ANALYZED_ANNOTATED_API_DIRS, extension.analyzedAnnotatedApiDirs);
-        }
-        // use case 2
-        if (extension.analyzedAnnotatedApiTargetDir != null) {
-            properties.put(Main.ANALYZED_ANNOTATED_API_TARGET_DIR, extension.analyzedAnnotatedApiTargetDir);
-        }
-        // use case 3
-        if (extension.annotatedApiTargetDir != null) {
-            properties.put(Main.ANNOTATED_API_TARGET_DIR, extension.annotatedApiTargetDir);
-        }
-        if (extension.annotatedApiTargetPackage != null) {
-            properties.put(Main.ANNOTATED_API_TARGET_PACKAGE, extension.annotatedApiTargetPackage);
-        }
-        if (extension.annotatedApiPackages != null) {
-            properties.put(Main.ANNOTATED_API_PACKAGES, extension.annotatedApiPackages);
-        }
-
-        // actions
-        properties.put(Main.ACTION, extension.action);
-        if (extension.actionParameters != null) {
-            String joined = String.join(M_A_G_I_C, extension.actionParameters);
-            properties.put(Main.ACTION_PARAMETER, joined);
-        }
+        generalMap.put(Main.ANALYSIS_RESULTS_DIR, analysisResultsDir);
+        generalMap.put(Main.PARALLEL, "" + extension.parallel);
+        generalMap.put(Main.ANALYSIS_STEPS, extension.analysisSteps);
+        generalMap.put(Main.DEBUG, extension.debugTargets);
+        generalMap.put(Main.QUIET, "" + extension.quiet);
+        return generalMap;
     }
 
     private static String getOrDefault(String property, String defaultValue) {
         return property == null || property.isBlank() ? defaultValue : property;
     }
 
-    private static void detectSourceEncoding(Project project, final Map<String, Object> properties) {
+    private static String detectSourceEncoding(Project project) {
+        AtomicReference<String> encodingRef = new AtomicReference<>();
         project.getTasks().withType(JavaCompile.class, compile -> {
             String encoding = compile.getOptions().getEncoding();
             if (encoding != null) {
-                properties.put(Main.SOURCE_ENCODING, encoding);
+                encodingRef.set(encoding);
             }
         });
+        return encodingRef.get();
     }
 
     private static final String[] UNRESOLVABLE_CONFIGURATIONS =
@@ -185,34 +290,6 @@ public record AnalyzerPropertyComputer(
             ));
 
     private static boolean detectSourceDirsAndJavaClasspath(Project project, Map<String, Object> properties, String jmods) {
-        JavaPluginExtension javaPluginExtension = new DslObject(project).getExtensions().getByType(JavaPluginExtension.class);
-
-        SourceSet main = javaPluginExtension.getSourceSets().getAt("main");
-        String sourceDirectoriesPathSeparated = sourcePathFromSourceSet(main);
-        properties.put(Main.SOURCE, sourceDirectoriesPathSeparated);
-
-        SourceSet test = javaPluginExtension.getSourceSets().getAt("test");
-        String testDirectoriesPathSeparated = sourcePathFromSourceSet(test);
-        properties.put(Main.TEST_SOURCE, testDirectoriesPathSeparated);
-
-        String jmodsSeparated;
-        if (jmods == null || jmods.trim().isEmpty()) jmodsSeparated = "";
-        else {
-            jmodsSeparated = Arrays.stream(jmods.trim().split("[," + File.pathSeparator + "]"))
-                    .map(s -> File.pathSeparator + "jmods/" + s)
-                    .collect(Collectors.joining());
-        }
-        String classPathSeparated = jmodsSeparated + File.pathSeparator + librariesFromSourceSet(main);
-        properties.put(Main.CLASSPATH, classPathSeparated);
-
-        String runtimeClassPathSeparated = runtimeLibrariesFromSourceSet(main);
-        properties.put(Main.RUNTIME_CLASSPATH, runtimeClassPathSeparated);
-
-        String testClassPathSeparated = librariesFromSourceSet(test);
-        properties.put(Main.TEST_CLASSPATH, jmodsSeparated + File.pathSeparator + testClassPathSeparated);
-
-        String testRuntimeClassPathSeparated = runtimeLibrariesFromSourceSet(test);
-        properties.put(Main.TESTS_RUNTIME_CLASSPATH, testRuntimeClassPathSeparated);
 
         List<String> dependencyList = new LinkedList<>();
         Set<String> seen = new HashSet<>();
@@ -251,30 +328,6 @@ public record AnalyzerPropertyComputer(
         properties.put(DEPENDENCIES, dependencies);
 
         return !sourceDirectoriesPathSeparated.isEmpty() || !testDirectoriesPathSeparated.isEmpty();
-    }
-
-    private static String sourcePathFromSourceSet(SourceSet sourceSet) {
-        return sourceSet.getAllJava().getSrcDirs()
-                .stream()
-                .filter(File::canRead)
-                .map(File::getAbsolutePath)
-                .collect(Collectors.joining(File.pathSeparator));
-    }
-
-    private static String librariesFromSourceSet(SourceSet sourceSet) {
-        return sourceSet.getCompileClasspath().getFiles()
-                .stream()
-                .filter(File::canRead)
-                .map(File::getAbsolutePath)
-                .collect(Collectors.joining(File.pathSeparator));
-    }
-
-    private static String runtimeLibrariesFromSourceSet(SourceSet sourceSet) {
-        return sourceSet.getRuntimeClasspath().getFiles()
-                .stream()
-                .filter(File::canRead)
-                .map(File::getAbsolutePath)
-                .collect(Collectors.joining(File.pathSeparator));
     }
 
     private static void addSystemProperties(Map<String, Object> properties) {

@@ -36,7 +36,6 @@ public class AnalyzerExtension {
     public String jre;
     public String sourcePackages;
     public String testSourcePackages;
-    public String excludeFromClasspath;
 
     /* from AnnotatedAPIConfiguration */
     // use case 1
@@ -48,9 +47,6 @@ public class AnalyzerExtension {
     public String annotatedApiPackages;
     public String annotatedApiTargetPackage;
 
-    // actions
-    public String action;
-    public String[] actionParameters;
 
     private final ActionBroadcast<AnalyzerProperties> propertiesActions;
 

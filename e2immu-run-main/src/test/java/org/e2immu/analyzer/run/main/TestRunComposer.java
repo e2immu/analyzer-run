@@ -27,7 +27,7 @@ public class TestRunComposer {
             LOGGER.info("Deleting {}", file);
         }
         Main.main(new String[]{
-                "--classpath=jmods/java.base.jmod",
+                "--classpath=jmod:java.base",
                 "--source=none",
                 "--annotated-api-packages=java.util.",
                 "--annotated-api-target-package=org.e2immu.aapi",

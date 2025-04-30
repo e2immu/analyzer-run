@@ -1,6 +1,7 @@
 package org.e2immu.analyzer.run.main;
 
 import org.apache.commons.cli.*;
+import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
@@ -14,8 +15,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import org.e2immu.analyzer.run.config.Configuration;
 
 public class Main {
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
@@ -194,7 +193,7 @@ public class Main {
         options.addOption("q", QUIET, false, "Silent mode. Do not write warnings, errors, etc. to stdout.");
     }
 
-    private static GeneralConfiguration generalConfiguration(Map<String, String> kvMap) {
+    public static GeneralConfiguration generalConfiguration(Map<String, String> kvMap) {
         GeneralConfiguration.Builder builder = new GeneralConfiguration.Builder();
         setBooleanProperty(kvMap, QUIET, builder::setQuiet);
         setBooleanProperty(kvMap, PARALLEL, builder::setParallel);
@@ -264,6 +263,11 @@ public class Main {
     }
 
     private static InputConfiguration inputConfiguration(Map<String, String> kvMap, GeneralConfiguration generalConfiguration) {
+        String dependencies = kvMap.getOrDefault(DEPENDENCIES, "");
+        String excludeFromClasspath = kvMap.getOrDefault(EXCLUDE_FROM_CLASSPATH, "");
+
+        LOGGER.info("Building input configuration, dependencies are {}, exclude is {}", dependencies, excludeFromClasspath);
+
         InputConfigurationImpl.Builder builder = new InputConfigurationImpl.Builder();
         setStringProperty(kvMap, JRE, builder::setAlternativeJREDirectory);
         setStringProperty(kvMap, SOURCE_ENCODING, builder::setSourceEncoding);
@@ -278,8 +282,8 @@ public class Main {
         setSplitStringProperty(kvMap, File.pathSeparator, RUNTIME_CLASSPATH, builder::addRuntimeClassPath);
         setSplitStringProperty(kvMap, File.pathSeparator, TESTS_RUNTIME_CLASSPATH, builder::addTestRuntimeClassPath);
 
-       // setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
-       // setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
+        // setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
+        // setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
 
         copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
@@ -287,7 +291,7 @@ public class Main {
 
     private static void copyFromGeneralConfiguration(GeneralConfiguration generalConfiguration, InputConfigurationImpl.Builder builder) {
         if (generalConfiguration.debugTargets().contains("classpath")) {
-         //   builder.setInfoLogClasspath(true);
+            //   builder.setInfoLogClasspath(true);
         }
     }
 
@@ -360,7 +364,7 @@ public class Main {
 
     }
 
-    private static AnnotatedAPIConfiguration annotatedAPIConfiguration(Map<String, String> kvMap) {
+    public static AnnotatedAPIConfiguration annotatedAPIConfiguration(Map<String, String> kvMap) {
         AnnotatedAPIConfigurationImpl.Builder builder = new AnnotatedAPIConfigurationImpl.Builder();
 
         setSplitStringProperty(kvMap, File.pathSeparator, ANALYZED_ANNOTATED_API_DIRS, builder::addAnalyzedAnnotatedApiDirs);
