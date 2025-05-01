@@ -10,6 +10,7 @@ import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
 import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,10 +24,10 @@ import java.util.stream.Collectors;
 /**
  * targets for sources:
  * <ul>
- *     <li>multiple directories in a source set</li>
- *     <li>source sets beyond main, test in the same project (e.g. functionalTest in testgradlepluginanalyzer</li>
+ *     <li>multiple directories in a source set (DONE)</li>
+ *     <li>source sets beyond main, test in the same project (e.g. functionalTest in testgradlepluginanalyzer (DONE)</li>
  *     <li>dependent source project in multi-project build</li>
- *     <li>dependent source projects in composite build</li>
+ *     <li>dependent source projects in composite build (TODO, current attempts have failed)</li>
  * </ul>
  * <p>
  * target for classpath: simply the main flags: test, runtimeOnly, and filtering using "excludeFromClasspath".
@@ -72,20 +73,16 @@ public class ComputeSourceSets {
             if (sourceSet != null) sourceSetsByName.put(sourceSet.name(), sourceSet);
         }
         List<Result> sourceSetDependencies = new ArrayList<>();
-        List<Configuration> configurations = new ArrayList<>(project.getConfigurations());
-        configurations.sort((c1, c2) -> {
-            String n1 = c1.getName();
-            String n2 = c2.getName();
-            boolean t1 = n1.toLowerCase().contains("runtime");
-            boolean t2 = n2.toLowerCase().contains("runtime");
-            if (!t1 && t2) return -1;
-            if (t1 && !t2) return 1;
-            boolean r1 = n1.toLowerCase().contains("test");
-            boolean r2 = n1.toLowerCase().contains("test");
-            if (!r1 && r2) return -1;
-            if (r1 && !r2) return 1;
-            return n1.compareTo(n2);
-        });
+        List<Configuration> configurations = sortConfigurations(project);
+        inspectConfigurations(project, excludeFromClasspath, projectsSeen, configurations, sourceSetsByName,
+                sourceSetDependencies);
+        String mainSourceSetName = projectName + "/main";
+        return new Result(mainSourceSetName, sourceSetsByName, sourceSetDependencies);
+    }
+
+    private void inspectConfigurations(Project project, Set<String> excludeFromClasspath, Set<String> projectsSeen,
+                                       List<Configuration> configurations, Map<String, SourceSet> sourceSetsByName,
+                                       List<Result> sourceSetDependencies) {
         for (Configuration configuration : configurations) {
             if (configuration.isCanBeResolved()) {
                 String configurationName = configuration.getName();
@@ -102,7 +99,7 @@ public class ComputeSourceSets {
                             if (file.canRead() && !excludeFromClasspath.contains(file.getName())
                                 && !excludeFromClasspath.contains(description)
                                 && !excludeFromClasspath.contains(mci.getModule())) {
-                                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(description,
+                                SourceSet set = new SourceSetImpl(description,
                                         null, file.toURI(), null, isTest, true,
                                         true, false, isRuntimeOnly, null,
                                         null);
@@ -129,8 +126,24 @@ public class ComputeSourceSets {
                 }
             }
         }
-        String mainSourceSetName = projectName + "/main";
-        return new Result(mainSourceSetName, sourceSetsByName, sourceSetDependencies);
+    }
+
+    private static @NotNull List<Configuration> sortConfigurations(Project project) {
+        List<Configuration> configurations = new ArrayList<>(project.getConfigurations());
+        configurations.sort((c1, c2) -> {
+            String n1 = c1.getName();
+            String n2 = c2.getName();
+            boolean t1 = n1.toLowerCase().contains("runtime");
+            boolean t2 = n2.toLowerCase().contains("runtime");
+            if (!t1 && t2) return -1;
+            if (t1 && !t2) return 1;
+            boolean r1 = n1.toLowerCase().contains("test");
+            boolean r2 = n1.toLowerCase().contains("test");
+            if (!r1 && r2) return -1;
+            if (r1 && !r2) return 1;
+            return n1.compareTo(n2);
+        });
+        return configurations;
     }
 
     private Project findProject(Project project, String projectName) {

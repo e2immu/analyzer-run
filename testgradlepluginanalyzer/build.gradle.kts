@@ -9,6 +9,13 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
+sourceSets {
+    main {
+        java {
+            setSrcDirs(listOf("src/main/java", "src/main2/java"))
+        }
+    }
+}
 
 repositories {
     maven {
@@ -20,7 +27,6 @@ repositories {
     }
     mavenCentral()
 }
-
 
 // see https://docs.gradle.org/current/userguide/testing_gradle_plugins.html
 val functionalTest: SourceSet by sourceSets.creating

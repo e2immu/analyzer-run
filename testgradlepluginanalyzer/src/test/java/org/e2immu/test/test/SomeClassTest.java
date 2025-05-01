@@ -1,5 +1,6 @@
 package org.e2immu.test.test;
 
+import org.e2immu.test.main.ASecondMainClass;
 import org.e2immu.test.main.SomeClass;
 import org.junit.jupiter.api.Test;
 
@@ -15,5 +16,7 @@ public class SomeClassTest {
             }
         };
         assertEquals("!", sc.make());
+
+        ASecondMainClass aSecondMainClass = new ASecondMainClass();
     }
 }
