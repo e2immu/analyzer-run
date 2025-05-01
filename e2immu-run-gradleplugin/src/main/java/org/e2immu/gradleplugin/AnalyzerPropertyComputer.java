@@ -18,35 +18,26 @@ import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.analyzer.run.main.Main;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
+import org.e2immu.gradleplugin.inputconfig.ComputeDependencies;
 import org.e2immu.gradleplugin.inputconfig.ComputeSourceSets;
+import org.e2immu.language.cst.api.element.SourceSet;
 import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
 import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
 import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 import org.e2immu.language.inspection.resource.SourceSetImpl;
 import org.e2immu.util.internal.graph.G;
+import org.e2immu.util.internal.graph.V;
 import org.e2immu.util.internal.graph.op.Linearize;
-import org.e2immu.util.internal.util.GradleConfiguration;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.result.*;
-import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
-import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
-import org.gradle.api.plugins.JavaPluginExtension;
-import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.compile.JavaCompile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -95,7 +86,7 @@ public record AnalyzerPropertyComputer(
             addSystemProperties(rawProperties);
         }
         // convert all the properties from subprojects into dot-notated properties
-       // flattenProperties(rawProperties, prefix, properties);
+        // flattenProperties(rawProperties, prefix, properties);
 
         LOGGER.debug("Resulting map is " + properties);
 
@@ -152,38 +143,38 @@ public record AnalyzerPropertyComputer(
         ComputeSourceSets.Result result = computeSourceSets.compute(project, extension.sourcePackages,
                 extension.testSourcePackages, excludeFromClasspath);
 
-        /*
-        // at the very end
-        makeJavaModules(extension.jmods).forEach(set -> sourceSetsByName.put(set.name(), set));
+        makeJavaModules(extension.jmods).forEach(set -> result.sourceSetsByName().put(set.name(), set));
 
-
-        LOGGER.info("Dependency graph: {}", dependencyGraph);
-        G.Builder<String> depGraphBuilder = new G.Builder<>(Long::sum);
-        dependencyGraph.forEach(depGraphBuilder::add);
-        G<String> graph = depGraphBuilder.build();
+        G<String> graph = new ComputeDependencies().go(result);
+        LOGGER.info("Dependency graph: {}", graph);
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
         LOGGER.info("Linearization: {}", linearization);
         for (String name : linearization) {
-            Set<org.e2immu.language.cst.api.element.SourceSet> dependencies = dependencyGraph.getOrDefault(name, Set.of())
-                    .stream().map(sourceSetsByName::get).filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
-            org.e2immu.language.cst.api.element.SourceSet sourceSet = sourceSetsByName.get(name);
+            Set<SourceSet> dependencies = graph.edges(new V<>(name)).keySet()
+                    .stream().map(v -> result.sourceSetsByName().get(v.t()))
+                    .filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
+            SourceSet sourceSet = result.sourceSetsByName().get(name);
             if (sourceSet == null) {
-                LOGGER.warn("Don't know source set {}, known {}", name, sourceSetsByName.keySet());
+                LOGGER.warn("Don't know source set {}", name);
             } else {
-                org.e2immu.language.cst.api.element.SourceSet set = sourceSet.withDependencies(dependencies);
+                SourceSet set = sourceSet.withDependencies(dependencies);
                 if (!set.externalLibrary()) builder.addSourceSets(set);
                 else builder.addClassPathParts(set);
             }
-        }*/
+        }
         return builder.build();
     }
 
-    private List<org.e2immu.language.cst.api.element.SourceSet> makeJavaModules(String jmodsString) {
+    private List<SourceSet> makeJavaModules(String jmodsString) {
         if (jmodsString == null || jmodsString.isBlank()) return List.of();
-        List<org.e2immu.language.cst.api.element.SourceSet> sets = new ArrayList<>();
-        for (String jmod : jmodsString.split("[,;]\\s*")) {
+        List<SourceSet> sets = new ArrayList<>();
+        String[] split = jmodsString.split("[,;]\\s*");
+        Set<String> jmods = new HashSet<>();
+        Collections.addAll(jmods, split);
+        Collections.addAll(jmods, "java.base");
+        for (String jmod : jmods) {
             if (!jmod.isBlank()) {
-                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(jmod, null,
+                SourceSet set = new SourceSetImpl(jmod, null,
                         URI.create("jmod:" + jmod),
                         null, false, true, true, true, false,
                         null, null);

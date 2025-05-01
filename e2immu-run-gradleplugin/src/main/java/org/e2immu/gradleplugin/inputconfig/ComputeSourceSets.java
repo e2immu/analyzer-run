@@ -5,10 +5,7 @@ import org.e2immu.language.inspection.resource.SourceSetImpl;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.initialization.IncludedBuild;
 import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
 import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -23,6 +20,18 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+/**
+ * targets for sources:
+ * <ul>
+ *     <li>multiple directories in a source set</li>
+ *     <li>source sets beyond main, test in the same project (e.g. functionalTest in testgradlepluginanalyzer</li>
+ *     <li>dependent source project in multi-project build</li>
+ *     <li>dependent source projects in composite build</li>
+ * </ul>
+ * <p>
+ * target for classpath: simply the main flags: test, runtimeOnly, and filtering using "excludeFromClasspath".
+ * There is no dependency information here.
+ */
 public class ComputeSourceSets {
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeSourceSets.class);
 
@@ -36,7 +45,8 @@ public class ComputeSourceSets {
                           Set<String> excludeFromClasspath) {
         Result result = compute(project, restrictSourcesToPackages, restrictTestSourcesToPackages, excludeFromClasspath,
                 new HashSet<>());
-        LOGGER.info("Exit compute source sets with result");
+        LOGGER.info("Exit compute source sets with result: {} has source sets/classpath parts {}, {} dependent source projects",
+                result.mainSourceSetName, result.sourceSetsByName.keySet(), result.sourceSetDependencies.size());
         return result;
     }
 
@@ -46,88 +56,80 @@ public class ComputeSourceSets {
                            Set<String> excludeFromClasspath,
                            Set<String> projectsSeen) {
         projectsSeen.add(project.getName());
-        LOGGER.info("Computing project {}, seen is {}", project.getName(), projectsSeen);
+        LOGGER.info("Computing source sets of {}", project);
 
         String encoding = detectSourceEncoding(project);
-        JavaPluginExtension javaPluginExtension = new DslObject(project).getExtensions().getByType(JavaPluginExtension.class);
-        Map<String, org.e2immu.language.cst.api.element.SourceSet> sourceSetsByName = new HashMap<>();
+        JavaPluginExtension javaPluginExtension = new DslObject(project).getExtensions()
+                .getByType(JavaPluginExtension.class);
+        Map<String, SourceSet> sourceSetsByName = new HashMap<>();
         String projectName = project.getName();
-        String mainSourceSetName = projectName + "/main";
-        SourceSet mainSourceSet = makeSourceSet(javaPluginExtension, mainSourceSetName, restrictSourcesToPackages, encoding, false);
-        if (mainSourceSet != null) sourceSetsByName.put(mainSourceSet.name(), mainSourceSet);
-        String testSourceSetName = projectName + "/test";
-        SourceSet testSourceSet = makeSourceSet(javaPluginExtension, testSourceSetName, restrictTestSourcesToPackages, encoding, true);
-        if (testSourceSet != null) sourceSetsByName.put(testSourceSet.name(), testSourceSet);
-
+        for (org.gradle.api.tasks.SourceSet gradleSourceSet : javaPluginExtension.getSourceSets()) {
+            String sourceSetName = projectName + "/" + gradleSourceSet.getName();
+            boolean test = gradleSourceSet.getName().toLowerCase().contains("test");
+            SourceSet sourceSet = makeSourceSet(gradleSourceSet, sourceSetName,
+                    test ? restrictTestSourcesToPackages : restrictSourcesToPackages,
+                    encoding, test);
+            if (sourceSet != null) sourceSetsByName.put(sourceSet.name(), sourceSet);
+        }
         List<Result> sourceSetDependencies = new ArrayList<>();
         for (Configuration configuration : project.getConfigurations()) {
             if (configuration.isCanBeResolved()) {
                 String configurationName = configuration.getName();
-                LOGGER.info(" -- analyzing configuration {}, {} dependencies", configurationName, configuration.getAllDependencies().size());
                 boolean isTest = configurationName.toLowerCase().contains("test");
                 boolean isRuntimeOnly = configurationName.toLowerCase().contains("runtimeonly");
 
                 for (ResolvedArtifactResult rar : configuration.getIncoming().getArtifacts().getArtifacts()) {
                     if (rar.getVariant().getOwner() instanceof ModuleComponentIdentifier mci) {
                         String description = mci.getGroup() + ":" + mci.getModule() + ":" + mci.getVersion();
-                        LOGGER.info(" -- library dependency {} in {}", description, configurationName);
                         if (!sourceSetsByName.containsKey(description)) {
+                            LOGGER.info(" -- library dependency {} in {}", description, configurationName);
                             File file = rar.getFile();
                             if (file.canRead() && !excludeFromClasspath.contains(file.getName())
                                 && !excludeFromClasspath.contains(description)
                                 && !excludeFromClasspath.contains(mci.getModule())) {
-                                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(description, null,
-                                        file.toURI(), null, isTest, true, true, false,
-                                        isRuntimeOnly, null, null);
+                                org.e2immu.language.cst.api.element.SourceSet set = new SourceSetImpl(description,
+                                        null, file.toURI(), null, isTest, true,
+                                        true, false, isRuntimeOnly, null,
+                                        null);
                                 sourceSetsByName.put(description, set);
                             }
                         }
                     } else if (rar.getVariant().getOwner() instanceof DefaultProjectComponentIdentifier pci) {
                         String description = pci.getProjectName();
-                        LOGGER.info(" --  project dependency {} in configuration {}, looking for path {}", description, configurationName, pci.getProjectIdentity());
                         Project dependentProject = findProject(project, pci.getProjectName());
                         if (dependentProject != null && !dependentProject.equals(project)) {
                             if (!projectsSeen.contains(description)) {
+                                LOGGER.info(" --  project dependency {} in configuration {}, looking for path {}", description,
+                                        configurationName, pci.getProjectIdentity());
+                                // recursion!!
                                 Result result = compute(dependentProject, null,
                                         null, excludeFromClasspath, projectsSeen);
                                 sourceSetDependencies.add(result);
                             }
+                        } else {
+                            LOGGER.info(" --  ignoring project dependency {} in configuration {}, not found",
+                                    description, configurationName);
                         }
-                    }
-                }
-
-                Set<ResolvedComponentResult> components = configuration
-                        .getIncoming()
-                        .getResolutionResult()
-                        .getAllComponents();
-
-                for (ResolvedComponentResult component : components) {
-                    if (component.getId() instanceof ProjectComponentIdentifier) {
-                        ProjectComponentIdentifier id = (ProjectComponentIdentifier) component.getId();
-                        Project byPath = project.getRootProject().findProject(id.getBuild().getBuildPath());
-                        LOGGER.info(" #### {} {} {}", id, id.getBuild().getBuildPath(), byPath);
                     }
                 }
             }
         }
-        LOGGER.info("Project {} has source set names {}, {} dependencies", mainSourceSet, sourceSetsByName.keySet(),
-                sourceSetDependencies.size());
+        String mainSourceSetName = projectName + "/main";
         return new Result(mainSourceSetName, sourceSetsByName, sourceSetDependencies);
     }
 
     private Project findProject(Project project, String projectName) {
         Project local = project.getRootProject().getAllprojects().stream()
-                .peek(p -> LOGGER.info("other project: {}", p.getName()))
                 .filter(p -> p.getName().equals(projectName)).findFirst().orElse(null);
         if (local != null) return local;
-        for (IncludedBuild ib : project.getGradle().getIncludedBuilds()) {
-            LOGGER.info("included build: {} at {}", ib.getName(), ib.getProjectDir());
-        }
+        //for (IncludedBuild ib : project.getGradle().getIncludedBuilds()) {
+        //   LOGGER.info("included build: {} at {}", ib.getName(), ib.getProjectDir());
+        //}
         return null;
     }
 
 
-    private SourceSet makeSourceSet(JavaPluginExtension javaPluginExtension,
+    private SourceSet makeSourceSet(org.gradle.api.tasks.SourceSet gradleSourceSet,
                                     String e2immuSourceSetName,
                                     String restrictTo,
                                     String encodingString,
@@ -137,8 +139,6 @@ public class ComputeSourceSets {
                         .filter(s -> !s.isBlank())
                         .collect(Collectors.toUnmodifiableSet());
         Charset sourceEncoding = encodingString == null ? null : Charset.forName(encodingString);
-        String gradleSourceSetName = test ? "test" : "main";
-        org.gradle.api.tasks.SourceSet gradleSourceSet = javaPluginExtension.getSourceSets().getByName(gradleSourceSetName);
         List<Path> paths = gradleSourceSet.getAllJava().getSrcDirs().stream()
                 .filter(File::canRead).map(File::toPath).toList();
         if (paths.isEmpty()) return null;
