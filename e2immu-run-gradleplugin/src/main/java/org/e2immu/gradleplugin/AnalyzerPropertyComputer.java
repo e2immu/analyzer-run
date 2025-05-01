@@ -16,6 +16,7 @@ package org.e2immu.gradleplugin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.e2immu.analyzer.run.config.GeneralConfiguration;
+import org.e2immu.analyzer.run.config.util.JavaModules;
 import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.analyzer.run.main.Main;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
@@ -173,12 +174,7 @@ public record AnalyzerPropertyComputer(
 
     private List<SourceSet> makeJavaModules(String jmodsString) {
         List<SourceSet> sets = new ArrayList<>();
-        Set<String> jmods = new HashSet<>();
-        Collections.addAll(jmods, "java.base");
-        if (jmodsString != null && !jmodsString.isBlank()) {
-            String[] split = jmodsString.split("[,;]\\s*");
-            Collections.addAll(jmods, split);
-        }
+        Set<String> jmods = JavaModules.jmodsFromString(jmodsString);
         for (String jmod : jmods) {
             if (!jmod.isBlank()) {
                 SourceSet set = new SourceSetImpl(jmod, null,

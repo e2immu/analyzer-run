@@ -1,5 +1,6 @@
 package org.e2immu.gradleplugin.inputconfig;
 
+import org.e2immu.analyzer.run.config.util.JavaModules;
 import org.e2immu.language.cst.api.element.SourceSet;
 import org.e2immu.util.internal.graph.G;
 import org.slf4j.Logger;
@@ -18,7 +19,7 @@ public class ComputeDependencies {
         for (SourceSet sourceSet : result.sourceSetsByName().values()) {
             if (sourceSet.partOfJdk()) {
                 String jmod = sourceSet.name();
-                Set<String> dependencies = jmodDependency(jmod);
+                Set<String> dependencies = JavaModules.jmodDependency(jmod);
                 LOGGER.info("Adding JMOD {} -> {}", jmod, dependencies);
                 builder.add(jmod, dependencies);
                 jmods.add(jmod);
@@ -98,22 +99,4 @@ public class ComputeDependencies {
         return mainSourceSets;
     }
 
-    private static Set<String> jmodDependency(String jmod) {
-        return switch (jmod) {
-            case "java.base" -> Set.of();
-            case "java.desktop" -> Set.of("java.xml", "java.datatransfer");
-            case "java.management.rmi" -> Set.of("java.management", "java.rmi");
-            case "java.se" -> Set.of("java.scripting", "java.sql.rowset", "java.xml.crypto", "java.desktop",
-                    "java.compiler", "java.instrument", "java.management.rmi", "java.net.http", "java.prefs",
-                    "java.security.jgss", "java.security.sasl");
-            case "java.sql" -> Set.of("java.logging", "java.xml", "java.transaction.xa");
-            case "java.sql.rowset" -> Set.of("java.sql", "java.naming");
-            case "java.xml.crypto" -> Set.of("java.xml");
-            case "java.compiler", "java.datatransfer", "java.instrument",
-                 "java.logging", "java.management", "java.naming", "java.net.http", "java.prefs", "java.rmi",
-                 "java.scripting", "java.security.jgss", "java.security.sasl", "java.smartcardio",
-                 "java.transaction.xa", "java.xml" -> Set.of("java.base");
-            default -> throw new UnsupportedOperationException("Implement: " + jmod);
-        };
-    }
 }

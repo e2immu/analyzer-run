@@ -26,6 +26,10 @@ java {
     withSourcesJar()
 }
 
+tasks.test {
+    useJUnitPlatform()
+}
+
 repositories {
     maven {
         url = uri(project.findProperty("codeartifactUri") as String)
