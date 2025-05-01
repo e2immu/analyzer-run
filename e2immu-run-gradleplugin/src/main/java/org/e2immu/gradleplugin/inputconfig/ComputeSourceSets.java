@@ -5,9 +5,11 @@ import org.e2immu.language.inspection.resource.SourceSetImpl;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.artifacts.result.ResolvedArtifactResult;
+import org.gradle.api.artifacts.result.ResolvedComponentResult;
+import org.gradle.api.initialization.IncludedBuild;
 import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency;
 import org.gradle.api.internal.plugins.DslObject;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.compile.JavaCompile;
@@ -82,7 +84,7 @@ public class ComputeSourceSets {
                         }
                     } else if (rar.getVariant().getOwner() instanceof DefaultProjectComponentIdentifier pci) {
                         String description = pci.getProjectName();
-                        LOGGER.info(" --  project dependency {} in configuration {}, looking for path {}", description, configurationName, pci.getProjectPath());
+                        LOGGER.info(" --  project dependency {} in configuration {}, looking for path {}", description, configurationName, pci.getProjectIdentity());
                         Project dependentProject = findProject(project, pci.getProjectName());
                         if (dependentProject != null && !dependentProject.equals(project)) {
                             if (!projectsSeen.contains(description)) {
@@ -91,6 +93,19 @@ public class ComputeSourceSets {
                                 sourceSetDependencies.add(result);
                             }
                         }
+                    }
+                }
+
+                Set<ResolvedComponentResult> components = configuration
+                        .getIncoming()
+                        .getResolutionResult()
+                        .getAllComponents();
+
+                for (ResolvedComponentResult component : components) {
+                    if (component.getId() instanceof ProjectComponentIdentifier) {
+                        ProjectComponentIdentifier id = (ProjectComponentIdentifier) component.getId();
+                        Project byPath = project.getRootProject().findProject(id.getBuild().getBuildPath());
+                        LOGGER.info(" #### {} {} {}", id, id.getBuild().getBuildPath(), byPath);
                     }
                 }
             }
@@ -105,10 +120,9 @@ public class ComputeSourceSets {
                 .peek(p -> LOGGER.info("other project: {}", p.getName()))
                 .filter(p -> p.getName().equals(projectName)).findFirst().orElse(null);
         if (local != null) return local;
-        project.getGradle().getIncludedBuilds().stream()
-                .peek(b -> LOGGER.info("other build: {}", b.getName()))
-                .filter(b -> b.getName().equals(projectName))
-                .findFirst().ifPresent(includedBuild -> LOGGER.info("Found included build"));
+        for (IncludedBuild ib : project.getGradle().getIncludedBuilds()) {
+            LOGGER.info("included build: {} at {}", ib.getName(), ib.getProjectDir());
+        }
         return null;
     }
 
