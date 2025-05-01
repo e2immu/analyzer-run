@@ -45,7 +45,7 @@ public class JsonStreaming {
         resolver.addMapping(InputConfiguration.class, InputConfigurationImpl.class);
         resolver.addMapping(AnnotatedAPIConfiguration.class, AnnotatedAPIConfigurationImpl.class);
         resolver.addMapping(LanguageConfiguration.class, LanguageConfigurationImpl.class);
-        
+
         module.setAbstractTypes(resolver);
 
         // only because we want to get the order straight: a correct linearization of the dependencies between the

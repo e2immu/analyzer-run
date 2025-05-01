@@ -49,6 +49,7 @@ public class AnalyzerPlugin implements Plugin<Project> {
                         File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
                         t.getOutputs().file(new File(buildDir, "inputConfiguration.json"));
                         configureTask(t, project, actionBroadcastMap);
+
                     });
         }
     }

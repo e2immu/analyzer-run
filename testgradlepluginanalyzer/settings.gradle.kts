@@ -17,3 +17,9 @@ pluginManagement {
         mavenCentral()
     }
 }
+
+buildCache {
+    local {
+        isEnabled = true
+    }
+}

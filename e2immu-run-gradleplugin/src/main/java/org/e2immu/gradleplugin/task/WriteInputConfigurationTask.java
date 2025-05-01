@@ -8,6 +8,7 @@ import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 import static org.e2immu.gradleplugin.AnalyzerPropertyComputer.E2IMMU_CONFIGURATION;
 
+@CacheableTask
 public class WriteInputConfigurationTask extends ConventionTask {
     private static final Logger LOGGER = Logging.getLogger(AnalyzerTask.class);
     private Map<String, String> analyserProperties;
