@@ -15,11 +15,10 @@
 
 plugins {
     java
-    id("maven-publish")
+    `maven-publish`
 }
 
 group = "org.e2immu"
-version = "0.0.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -39,28 +38,28 @@ repositories {
 }
 
 dependencies {
-    implementation("org.e2immu:e2immu-external-support:some.version")
-    implementation("org.e2immu:e2immu-internal-util:some.version")
-    implementation("org.e2immu:e2immu-internal-graph:some.version")
+    implementation("org.e2immu:e2immu-external-support:${version}")
+    implementation("org.e2immu:e2immu-internal-util:${version}")
+    implementation("org.e2immu:e2immu-internal-graph:${version}")
 
-    implementation("org.e2immu:e2immu-cst-api:some.version")
-    implementation("org.e2immu:e2immu-cst-impl:some.version")
-    implementation("org.e2immu:e2immu-cst-io:some.version")
-    implementation("org.e2immu:e2immu-cst-print:some.version")
-    implementation("org.e2immu:e2immu-cst-analysis:some.version")
+    implementation("org.e2immu:e2immu-cst-api:${version}")
+    implementation("org.e2immu:e2immu-cst-impl:${version}")
+    implementation("org.e2immu:e2immu-cst-io:${version}")
+    implementation("org.e2immu:e2immu-cst-print:${version}")
+    implementation("org.e2immu:e2immu-cst-analysis:${version}")
 
-    implementation("org.e2immu:e2immu-java-parser:some.version")
-    implementation("org.e2immu:e2immu-java-bytecode:some.version")
+    implementation("org.e2immu:e2immu-java-parser:${version}")
+    implementation("org.e2immu:e2immu-java-bytecode:${version}")
 
-    implementation("org.e2immu:e2immu-inspection-api:some.version")
-    implementation("org.e2immu:e2immu-inspection-resource:some.version")
-    implementation("org.e2immu:e2immu-inspection-integration:some.version")
-    implementation("org.e2immu:e2immu-inspection-parser:some.version")
+    implementation("org.e2immu:e2immu-inspection-api:${version}")
+    implementation("org.e2immu:e2immu-inspection-resource:${version}")
+    implementation("org.e2immu:e2immu-inspection-integration:${version}")
+    implementation("org.e2immu:e2immu-inspection-parser:${version}")
 
-    implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
+    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
 
-    implementation("org.e2immu:e2immu-modification-prepwork:some.version")
-    implementation("org.e2immu:e2immu-modification-linkedvariables:some.version")
+    implementation("org.e2immu:e2immu-modification-prepwork:${version}")
+    implementation("org.e2immu:e2immu-modification-linkedvariables:${version}")
 
     implementation("org.e2immu:e2immu-run-config:0.0.1")
 
@@ -93,9 +92,13 @@ publishing {
             from(components["java"])
 
             pom {
-                name = "Gradle plugin for e2immu analyser"
-                description = "Static code analyser focusing on modication and immutability"
+                name = "analyzer-run-main of e2immu analyser"
+                description = "Static code analyser focusing on modification and immutability. " +
+                        "This module contains a main method for running the analyzer."
                 url = "https://e2immu.org"
+                scm {
+                    url = "https://github.com/e2immu"
+                }
                 licenses {
                     license {
                         name = "GNU Lesser General Public License, version 3.0"

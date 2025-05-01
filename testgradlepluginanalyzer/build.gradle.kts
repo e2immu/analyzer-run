@@ -33,8 +33,8 @@ val functionalTest: SourceSet by sourceSets.creating
 
 dependencies {
     implementation(gradleApi())
-    implementation("org.e2immu:e2immu-external-support:some.version")
-    implementation("org.e2immu:e2immu-internal-util:some.version")
+    implementation("org.e2immu:e2immu-external-support:${version}")
+    implementation("org.e2immu:e2immu-internal-util:${version}")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3") // used in tests -> auto
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")

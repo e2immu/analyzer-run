@@ -15,7 +15,7 @@
 
 plugins {
     java
-    id("maven-publish")
+    `maven-publish`
 }
 
 group = "org.e2immu"
@@ -38,11 +38,11 @@ repositories {
 }
 
 dependencies {
-    implementation("org.e2immu:e2immu-cst-api:some.version")
-    implementation("org.e2immu:e2immu-cst-impl:some.version")
-    implementation("org.e2immu:e2immu-inspection-api:some.version")
-    implementation("org.e2immu:e2immu-inspection-resource:some.version")
-    implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
+    implementation("org.e2immu:e2immu-cst-api:${version}")
+    implementation("org.e2immu:e2immu-cst-impl:${version}")
+    implementation("org.e2immu:e2immu-inspection-api:${version}")
+    implementation("org.e2immu:e2immu-inspection-resource:${version}")
+    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
 
     implementation("org.slf4j:slf4j-api:2.0.7")
 }

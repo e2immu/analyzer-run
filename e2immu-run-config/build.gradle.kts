@@ -15,11 +15,10 @@
 
 plugins {
     java
-    id("maven-publish")
+    `maven-publish`
 }
 
 group = "org.e2immu"
-version = "0.0.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -39,11 +38,11 @@ repositories {
 }
 
 dependencies {
-    implementation("org.e2immu:e2immu-cst-api:some.version")
-    implementation("org.e2immu:e2immu-cst-impl:some.version")
-    implementation("org.e2immu:e2immu-inspection-api:some.version")
-    implementation("org.e2immu:e2immu-inspection-resource:some.version")
-    implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
+    implementation("org.e2immu:e2immu-cst-api:${version}")
+    implementation("org.e2immu:e2immu-cst-impl:${version}")
+    implementation("org.e2immu:e2immu-inspection-api:${version}")
+    implementation("org.e2immu:e2immu-inspection-resource:${version}")
+    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
 
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
@@ -51,7 +50,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
 }
-
 
 publishing {
     repositories {
@@ -68,9 +66,13 @@ publishing {
             from(components["java"])
 
             pom {
-                name = "Gradle plugin for e2immu analyser"
-                description = "Static code analyser focusing on modication and immutability"
+                name = "analyzer-run-config of e2immu analyser"
+                description = "Static code analyser focusing on modification and immutability. " +
+                        "This module contains configuration objects for running the analyzer."
                 url = "https://e2immu.org"
+                scm {
+                    url = "https://github.com/e2immu"
+                }
                 licenses {
                     license {
                         name = "GNU Lesser General Public License, version 3.0"

@@ -19,7 +19,6 @@ plugins {
 }
 
 group = "org.e2immu"
-version = "0.0.1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -39,18 +38,17 @@ repositories {
 }
 
 dependencies {
-    implementation("org.e2immu:e2immu-external-support:some.version")
-    implementation("org.e2immu:e2immu-internal-util:some.version")
-    implementation("org.e2immu:e2immu-internal-graph:some.version")
-    implementation("org.e2immu:e2immu-cst-api:some.version")
-    implementation("org.e2immu:e2immu-cst-impl:some.version")
-    implementation("org.e2immu:e2immu-inspection-api:some.version")
-    implementation("org.e2immu:e2immu-inspection-resource:some.version")
-    implementation("org.e2immu:e2immu-shallow-analyzer:some.version")
-    implementation("org.e2immu:e2immu-modification-prepwork:some.version")
-
-    implementation("org.e2immu:e2immu-run-config:0.0.1")
-    implementation("org.e2immu:e2immu-run-main:0.0.1")
+    implementation("org.e2immu:e2immu-external-support:${version}")
+    implementation("org.e2immu:e2immu-internal-util:${version}")
+    implementation("org.e2immu:e2immu-internal-graph:${version}")
+    implementation("org.e2immu:e2immu-cst-api:${version}")
+    implementation("org.e2immu:e2immu-cst-impl:${version}")
+    implementation("org.e2immu:e2immu-inspection-api:${version}")
+    implementation("org.e2immu:e2immu-inspection-resource:${version}")
+    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
+    implementation("org.e2immu:e2immu-modification-prepwork:${version}")
+    implementation("org.e2immu:e2immu-run-config:${version}")
+    implementation("org.e2immu:e2immu-run-main:${version}")
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("org.slf4j:slf4j-api:2.0.7")
