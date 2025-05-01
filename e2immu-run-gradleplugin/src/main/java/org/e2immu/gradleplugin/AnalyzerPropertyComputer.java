@@ -116,7 +116,7 @@ public record AnalyzerPropertyComputer(
         }*/
     }
 
-    private org.e2immu.analyzer.run.config.Configuration computeConfiguration(Project project, AnalyzerExtension extension) {
+    public org.e2immu.analyzer.run.config.Configuration computeConfiguration(Project project, AnalyzerExtension extension) {
         LanguageConfiguration languageConfiguration = new LanguageConfigurationImpl(true);
 
         // general
@@ -171,12 +171,13 @@ public record AnalyzerPropertyComputer(
     }
 
     private List<SourceSet> makeJavaModules(String jmodsString) {
-        if (jmodsString == null || jmodsString.isBlank()) return List.of();
         List<SourceSet> sets = new ArrayList<>();
-        String[] split = jmodsString.split("[,;]\\s*");
         Set<String> jmods = new HashSet<>();
-        Collections.addAll(jmods, split);
         Collections.addAll(jmods, "java.base");
+        if (jmodsString != null && !jmodsString.isBlank()) {
+            String[] split = jmodsString.split("[,;]\\s*");
+            Collections.addAll(jmods, split);
+        }
         for (String jmod : jmods) {
             if (!jmod.isBlank()) {
                 SourceSet set = new SourceSetImpl(jmod, null,
