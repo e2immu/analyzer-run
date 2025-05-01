@@ -5,10 +5,7 @@ import org.e2immu.util.internal.graph.G;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ComputeDependencies {
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeDependencies.class);
@@ -46,7 +43,7 @@ public class ComputeDependencies {
         // every external library is dependent on all the jmods
         for (SourceSet sourceSet : result.sourceSetsByName().values()) {
             String name = sourceSet.name();
-            if (sourceSet.externalLibrary() && seen.add(name)) {
+            if (sourceSet.externalLibrary() && !sourceSet.partOfJdk() && seen.add(name)) {
                 builder.add(name, jmods);
                 LOGGER.info("Adding EXT {} -> {}", name, jmods);
                 jmodsAndExternal.add(name);
@@ -76,14 +73,14 @@ public class ComputeDependencies {
                 LOGGER.info("Adding SRC->DEP {} -> {}", name, dependentSourceSets);
                 builder.add(name, dependentSourceSets);
 
-                if(sourceSet.test()) {
+                if (sourceSet.test()) {
                     testSourceSets.add(name);
                 } else {
                     mainSourceSets.add(name);
                 }
             }
         }
-        for(String testName: testSourceSets) {
+        for (String testName : testSourceSets) {
             LOGGER.info("ADDING SRC MAIN->TEST {} -> {}", testName, mainSourceSets);
             builder.add(testName, mainSourceSets);
         }

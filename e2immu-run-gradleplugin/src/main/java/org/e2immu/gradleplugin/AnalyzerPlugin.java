@@ -46,8 +46,8 @@ public class AnalyzerPlugin implements Plugin<Project> {
             project.getTasks().register(AnalyzerExtension.WRITE_INPUT_CONFIGURATION_TASK_NAME,
                     (Class<? extends ConventionTask>) WriteInputConfigurationTask.class, t -> {
                         t.setDescription("Writes out the input configuration of the project to a json file");
-                        File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
-                        t.getOutputs().file(new File(buildDir, "inputConfiguration.json"));
+                      //  File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
+                  //      t.getOutputs().file(new File(buildDir, "inputConfiguration.json"));
                         configureTask(t, project, actionBroadcastMap);
 
                     });

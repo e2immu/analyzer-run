@@ -154,7 +154,8 @@ public record AnalyzerPropertyComputer(
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
         LOGGER.info("Linearization:\n  {}\n", String.join("\n  ", linearization));
         for (String name : linearization) {
-            Set<SourceSet> dependencies = graph.edges(new V<>(name)).keySet()
+            Map<V<String>, Long> edges = graph.edges(new V<>(name));
+            Set<SourceSet> dependencies = edges == null ? Set.of() : edges.keySet()
                     .stream().map(v -> result.sourceSetsByName().get(v.t()))
                     .filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
             SourceSet sourceSet = result.sourceSetsByName().get(name);
