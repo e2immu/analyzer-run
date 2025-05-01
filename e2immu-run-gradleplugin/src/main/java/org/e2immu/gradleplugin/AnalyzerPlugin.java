@@ -14,7 +14,6 @@
 
 package org.e2immu.gradleplugin;
 
-import org.e2immu.gradleplugin.task.AnalyzerTask;
 import org.e2immu.gradleplugin.task.WriteInputConfigurationTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -25,6 +24,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.plugins.JavaPlugin;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -39,11 +39,17 @@ public class AnalyzerPlugin implements Plugin<Project> {
             Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap = new HashMap<>();
             addExtensions(project, actionBroadcastMap);
 
-            addTask(project, AnalyzerExtension.ANALYZER_TASK_NAME, AnalyzerTask.class,
-                    "Analyses " + project + " and its sub-projects with the e2immu analyser.",
-                    actionBroadcastMap);
-            addTask(project, AnalyzerExtension.WRITE_INPUT_CONFIGURATION_TASK_NAME, WriteInputConfigurationTask.class,
-                    "Writes out the input configuration of the project to a json file", actionBroadcastMap);
+            // addTask(project, AnalyzerExtension.ANALYZER_TASK_NAME, AnalyzerTask.class,
+            //         "Analyses " + project + " and its sub-projects with the e2immu analyser.",
+            //         actionBroadcastMap);
+            LOGGER.debug("Adding " + AnalyzerExtension.WRITE_INPUT_CONFIGURATION_TASK_NAME + " task to " + project);
+            project.getTasks().register(AnalyzerExtension.WRITE_INPUT_CONFIGURATION_TASK_NAME,
+                    (Class<? extends ConventionTask>) WriteInputConfigurationTask.class, t -> {
+                        t.setDescription("Writes out the input configuration of the project to a json file");
+                        File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
+                        t.getOutputs().file(new File(buildDir, "inputConfiguration.json"));
+                        configureTask(t, project, actionBroadcastMap);
+                    });
         }
     }
 
@@ -56,20 +62,15 @@ public class AnalyzerPlugin implements Plugin<Project> {
         });
     }
 
-    private void addTask(Project project, String name, Class<? extends ConventionTask> clazz, String description,
-                         Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
-        LOGGER.debug("Adding " + name + " task to " + project);
-        ConventionTask task = project.getTasks().create(name, clazz);
-        task.setDescription(description);
-        configureTask(task, project, actionBroadcastMap);
-    }
-
     private void configureTask(ConventionTask task, Project project, Map<String, ActionBroadcast<AnalyzerProperties>> actionBroadcastMap) {
         ConventionMapping conventionMapping = task.getConventionMapping();
         // this will call the AnalyzerPropertyComputer to populate the properties of the task just before running it
         conventionMapping.map("properties",
                 () -> new AnalyzerPropertyComputer(actionBroadcastMap, project).computeProperties());
-
+        conventionMapping.map("outputFile", () -> {
+            File buildDir = project.getLayout().getBuildDirectory().get().getAsFile();
+            return new File(buildDir, "inputConfiguration.json");
+        });
         Callable<Iterable<? extends Task>> compileTasks = () -> project.getAllprojects().stream()
                 .filter(p -> p.getPlugins().hasPlugin(JavaPlugin.class)
                              && !p.getExtensions().getByType(AnalyzerExtension.class).skipProject)

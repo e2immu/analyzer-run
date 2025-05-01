@@ -15,6 +15,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
 import org.e2immu.language.cst.api.element.SourceSet;
+import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
+import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
 import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.api.resource.MD5FingerPrint;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
@@ -42,7 +44,8 @@ public class JsonStreaming {
         resolver.addMapping(SourceSet.class, SourceSetImpl.class);
         resolver.addMapping(InputConfiguration.class, InputConfigurationImpl.class);
         resolver.addMapping(AnnotatedAPIConfiguration.class, AnnotatedAPIConfigurationImpl.class);
-
+        resolver.addMapping(LanguageConfiguration.class, LanguageConfigurationImpl.class);
+        
         module.setAbstractTypes(resolver);
 
         // only because we want to get the order straight: a correct linearization of the dependencies between the

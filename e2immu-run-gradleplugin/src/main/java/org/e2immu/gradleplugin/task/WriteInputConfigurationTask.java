@@ -9,6 +9,7 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.File;
@@ -31,12 +32,24 @@ public class WriteInputConfigurationTask extends ConventionTask {
             Configuration configuration = objectMapper.readerFor(Configuration.class)
                     .readValue(configurationJson);
             InputConfiguration inputConfiguration = configuration.inputConfiguration();
-            File buildDir = getProject().getLayout().getBuildDirectory().getAsFile().get();
-            File outFile = new File(buildDir, "inputConfiguration.json");
-            objectMapper.writerFor(InputConfigurationImpl.class).writeValue(outFile, inputConfiguration);
+            if (getOutputFile().getParentFile().mkdirs()) {
+                LOGGER.debug("Created parent directories for output file {}", getOutputFile());
+            }
+            objectMapper.writerFor(InputConfigurationImpl.class).writeValue(getOutputFile(), inputConfiguration);
         } catch (IOException ioException) {
             LOGGER.error("Caught IOException", ioException);
         }
+    }
+
+    private File outputFile;
+
+    @OutputFile
+    public File getOutputFile() {
+        return outputFile;
+    }
+
+    public void setOutputFile(File outputFile) {
+        this.outputFile = outputFile;
     }
 
     /**

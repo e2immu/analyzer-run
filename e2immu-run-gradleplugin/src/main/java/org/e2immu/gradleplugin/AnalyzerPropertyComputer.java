@@ -14,6 +14,7 @@
 
 package org.e2immu.gradleplugin;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.analyzer.run.main.Main;
@@ -73,8 +74,12 @@ public record AnalyzerPropertyComputer(
         } catch (IOException io) {
             throw new RuntimeException(io);
         }
-        rawProperties.put(E2IMMU_CONFIGURATION, configuration);
-
+        try {
+            String configurationJson = JsonStreaming.objectMapper().writeValueAsString(configuration);
+            properties.put(E2IMMU_CONFIGURATION, configurationJson);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         ActionBroadcast<AnalyzerProperties> actionBroadcast = actionBroadcastMap.get(project.getPath());
         if (actionBroadcast != null) {
             AnalyzerProperties analyzerProperties = new AnalyzerProperties(properties);
@@ -83,11 +88,11 @@ public record AnalyzerPropertyComputer(
 
         // with the highest priority, override directly for this project from the system properties
         if (project.equals(targetProject)) {
-            addSystemProperties(rawProperties);
+            addSystemProperties(properties);
         }
         // convert all the properties from subprojects into dot-notated properties
         // flattenProperties(rawProperties, prefix, properties);
-
+        /*
         LOGGER.debug("Resulting map is " + properties);
 
         List<Project> enabledChildProjects = project.getChildProjects().values().stream()
@@ -108,7 +113,7 @@ public record AnalyzerPropertyComputer(
             String moduleId = childProject.getPath();
             String modulePrefix = !prefix.isEmpty() ? (prefix + "." + moduleId) : moduleId;
             computeProperties(childProject, properties, modulePrefix);
-        }
+        }*/
     }
 
     private org.e2immu.analyzer.run.config.Configuration computeConfiguration(Project project, AnalyzerExtension extension) {
@@ -146,9 +151,8 @@ public record AnalyzerPropertyComputer(
         makeJavaModules(extension.jmods).forEach(set -> result.sourceSetsByName().put(set.name(), set));
 
         G<String> graph = new ComputeDependencies().go(result);
-        LOGGER.info("Dependency graph: {}", graph);
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
-        LOGGER.info("Linearization: {}", linearization);
+        LOGGER.info("Linearization:\n  {}\n", String.join("\n  ", linearization));
         for (String name : linearization) {
             Set<SourceSet> dependencies = graph.edges(new V<>(name)).keySet()
                     .stream().map(v -> result.sourceSetsByName().get(v.t()))

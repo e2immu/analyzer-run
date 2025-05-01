@@ -5,7 +5,9 @@ import org.e2immu.util.internal.graph.G;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ComputeDependencies {
@@ -43,30 +45,49 @@ public class ComputeDependencies {
 
         // every external library is dependent on all the jmods
         for (SourceSet sourceSet : result.sourceSetsByName().values()) {
-            if (sourceSet.externalLibrary() && seen.add(sourceSet.name())) {
-                builder.add(sourceSet.name(), jmods);
-                LOGGER.info("Adding EXT {} -> {}", sourceSet.name(), jmods);
-                jmodsAndExternal.add(sourceSet.name());
+            String name = sourceSet.name();
+            if (sourceSet.externalLibrary() && seen.add(name)) {
+                builder.add(name, jmods);
+                LOGGER.info("Adding EXT {} -> {}", name, jmods);
+                jmodsAndExternal.add(name);
             }
         }
     }
 
-    private void recursionForSourceSets(G.Builder<String> builder, ComputeSourceSets.Result result,
-                                        Set<String> seen, Set<String> jmodsAndExternal) {
-        if (!seen.add(result.mainSourceSetName())) return;
+    private List<String> recursionForSourceSets(G.Builder<String> builder, ComputeSourceSets.Result result,
+                                                Set<String> seen, Set<String> jmodsAndExternal) {
+        if (!seen.add(result.mainSourceSetName())) return List.of();
 
         // depth first
+        List<String> dependentSourceSets = new ArrayList<>();
         for (ComputeSourceSets.Result sub : result.sourceSetDependencies()) {
-            recursionForSourceSets(builder, sub, seen, jmodsAndExternal);
+            dependentSourceSets.addAll(recursionForSourceSets(builder, sub, seen, jmodsAndExternal));
         }
+
+        List<String> mainSourceSets = new ArrayList<>();
+        List<String> testSourceSets = new ArrayList<>();
 
         // every source set is dependent on all the external libraries, and the jmods
         for (SourceSet sourceSet : result.sourceSetsByName().values()) {
             if (!sourceSet.externalLibrary()) {
-                LOGGER.info("Adding SRC {} -> {}", sourceSet.name(), jmodsAndExternal);
-                builder.add(sourceSet.name(), jmodsAndExternal);
+                String name = sourceSet.name();
+                LOGGER.info("Adding SRC->EXT/JMOD {} -> {}", name, jmodsAndExternal);
+                builder.add(name, jmodsAndExternal);
+                LOGGER.info("Adding SRC->DEP {} -> {}", name, dependentSourceSets);
+                builder.add(name, dependentSourceSets);
+
+                if(sourceSet.test()) {
+                    testSourceSets.add(name);
+                } else {
+                    mainSourceSets.add(name);
+                }
             }
         }
+        for(String testName: testSourceSets) {
+            LOGGER.info("ADDING SRC MAIN->TEST {} -> {}", testName, mainSourceSets);
+            builder.add(testName, mainSourceSets);
+        }
+        return mainSourceSets;
     }
 
     private static Set<String> jmodDependency(String jmod) {

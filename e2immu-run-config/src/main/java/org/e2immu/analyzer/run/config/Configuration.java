@@ -1,5 +1,6 @@
 package org.e2immu.analyzer.run.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
@@ -18,6 +19,13 @@ public class Configuration {
     @JsonProperty
     private final LanguageConfiguration languageConfiguration;
 
+    @JsonCreator
+    private Configuration(@JsonProperty("generalConfiguration") GeneralConfiguration generalConfiguration,
+                          @JsonProperty("inputConfiguration") InputConfiguration inputConfiguration,
+                          @JsonProperty("languageConfiguration") LanguageConfiguration languageConfiguration) {
+        this(generalConfiguration, inputConfiguration, null, languageConfiguration);
+    }
+
     private Configuration(GeneralConfiguration generalConfiguration,
                           InputConfiguration inputConfiguration,
                           AnnotatedAPIConfiguration annotatedAPIConfiguration,
@@ -27,6 +35,7 @@ public class Configuration {
         this.inputConfiguration = inputConfiguration;
         this.languageConfiguration = languageConfiguration;
     }
+
 
     @Override
     public String toString() {
