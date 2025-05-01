@@ -152,6 +152,7 @@ public record AnalyzerPropertyComputer(
 
         G<String> graph = new ComputeDependencies().go(result);
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
+        LOGGER.info("Graph: {}", graph);
         LOGGER.info("Linearization:\n  {}\n", String.join("\n  ", linearization));
         for (String name : linearization) {
             Map<V<String>, Long> edges = graph.edges(new V<>(name));

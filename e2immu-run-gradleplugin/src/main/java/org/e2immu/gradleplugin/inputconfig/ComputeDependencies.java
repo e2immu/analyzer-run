@@ -24,20 +24,21 @@ public class ComputeDependencies {
                 jmods.add(jmod);
             }
         }
-        Set<String> jmodsAndExternal = new HashSet<>(jmods);
+        Map<String, Boolean> jmodsAndExternalToMain = new HashMap<>();
+        jmods.forEach(jmod -> jmodsAndExternalToMain.put(jmod, true));
         HashSet<String> seen = new HashSet<>();
-        recursionForClassPathParts(builder, result, seen, jmods, jmodsAndExternal);
+        recursionForClassPathParts(builder, result, seen, jmods, jmodsAndExternalToMain);
 
-        recursionForSourceSets(builder, result, seen, jmodsAndExternal);
+        recursionForSourceSets(builder, result, seen, jmodsAndExternalToMain);
         return builder.build();
     }
 
     private void recursionForClassPathParts(G.Builder<String> builder, ComputeSourceSets.Result result,
-                                            Set<String> seen, Set<String> jmods, Set<String> jmodsAndExternal) {
+                                            Set<String> seen, Set<String> jmods, Map<String, Boolean> jmodsAndExternalToMain) {
 
         // depth first
         for (ComputeSourceSets.Result sub : result.sourceSetDependencies()) {
-            recursionForClassPathParts(builder, sub, seen, jmods, jmodsAndExternal);
+            recursionForClassPathParts(builder, sub, seen, jmods, jmodsAndExternalToMain);
         }
 
         // every external library is dependent on all the jmods
@@ -45,20 +46,24 @@ public class ComputeDependencies {
             String name = sourceSet.name();
             if (sourceSet.externalLibrary() && !sourceSet.partOfJdk() && seen.add(name)) {
                 builder.add(name, jmods);
-                LOGGER.info("Adding EXT {} -> {}", name, jmods);
-                jmodsAndExternal.add(name);
+                if (!sourceSet.runtimeOnly()) {
+                    jmodsAndExternalToMain.merge(name, !sourceSet.test(), Boolean::logicalOr);
+                    LOGGER.info("Adding EXT {} in main? {} -> {}", name, jmodsAndExternalToMain.get(name), jmods);
+                } else {
+                    LOGGER.info("Not adding EXT {} in main? {}, runtime only", name, !sourceSet.test());
+                }
             }
         }
     }
 
     private List<String> recursionForSourceSets(G.Builder<String> builder, ComputeSourceSets.Result result,
-                                                Set<String> seen, Set<String> jmodsAndExternal) {
+                                                Set<String> seen, Map<String, Boolean> jmodsAndExternalToMain) {
         if (!seen.add(result.mainSourceSetName())) return List.of();
 
         // depth first
         List<String> dependentSourceSets = new ArrayList<>();
         for (ComputeSourceSets.Result sub : result.sourceSetDependencies()) {
-            dependentSourceSets.addAll(recursionForSourceSets(builder, sub, seen, jmodsAndExternal));
+            dependentSourceSets.addAll(recursionForSourceSets(builder, sub, seen, jmodsAndExternalToMain));
         }
 
         List<String> mainSourceSets = new ArrayList<>();
@@ -68,8 +73,14 @@ public class ComputeDependencies {
         for (SourceSet sourceSet : result.sourceSetsByName().values()) {
             if (!sourceSet.externalLibrary()) {
                 String name = sourceSet.name();
-                LOGGER.info("Adding SRC->EXT/JMOD {} -> {}", name, jmodsAndExternal);
-                builder.add(name, jmodsAndExternal);
+                jmodsAndExternalToMain.forEach((je, isMain) -> {
+                    if (sourceSet.test() || isMain) {
+                        LOGGER.info("Adding SRC->EXT/JMOD {} -> {}", name, je);
+                        builder.add(name, List.of(je));
+                    } else {
+                        LOGGER.info("Ignoring SRC->EXT/JMOD {} -> {}", name, je);
+                    }
+                });
                 LOGGER.info("Adding SRC->DEP {} -> {}", name, dependentSourceSets);
                 builder.add(name, dependentSourceSets);
 

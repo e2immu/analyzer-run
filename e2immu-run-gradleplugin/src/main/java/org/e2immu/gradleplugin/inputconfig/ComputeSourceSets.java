@@ -72,11 +72,26 @@ public class ComputeSourceSets {
             if (sourceSet != null) sourceSetsByName.put(sourceSet.name(), sourceSet);
         }
         List<Result> sourceSetDependencies = new ArrayList<>();
-        for (Configuration configuration : project.getConfigurations()) {
+        List<Configuration> configurations = new ArrayList<>(project.getConfigurations());
+        configurations.sort((c1, c2) -> {
+            String n1 = c1.getName();
+            String n2 = c2.getName();
+            boolean t1 = n1.toLowerCase().contains("runtime");
+            boolean t2 = n2.toLowerCase().contains("runtime");
+            if (!t1 && t2) return -1;
+            if (t1 && !t2) return 1;
+            boolean r1 = n1.toLowerCase().contains("test");
+            boolean r2 = n1.toLowerCase().contains("test");
+            if (!r1 && r2) return -1;
+            if (r1 && !r2) return 1;
+            return n1.compareTo(n2);
+        });
+        for (Configuration configuration : configurations) {
             if (configuration.isCanBeResolved()) {
                 String configurationName = configuration.getName();
+                LOGGER.info("Inspecting configuration {}", configurationName);
                 boolean isTest = configurationName.toLowerCase().contains("test");
-                boolean isRuntimeOnly = configurationName.toLowerCase().contains("runtimeonly");
+                boolean isRuntimeOnly = configurationName.toLowerCase().contains("runtime");
 
                 for (ResolvedArtifactResult rar : configuration.getIncoming().getArtifacts().getArtifacts()) {
                     if (rar.getVariant().getOwner() instanceof ModuleComponentIdentifier mci) {
