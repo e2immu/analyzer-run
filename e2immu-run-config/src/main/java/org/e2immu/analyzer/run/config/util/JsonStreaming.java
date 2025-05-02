@@ -37,8 +37,8 @@ import java.util.Set;
 public class JsonStreaming {
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonStreaming.class);
 
-    public static ObjectMapper objectMapper() {
-        SimpleModule module = new SimpleModule("CustomModel", Version.unknownVersion());
+    public static SimpleModule configModule() {
+        SimpleModule module = new SimpleModule("e2immuConfig", Version.unknownVersion());
 
         SimpleAbstractTypeResolver resolver = new SimpleAbstractTypeResolver();
         resolver.addMapping(SourceSet.class, SourceSetImpl.class);
@@ -54,8 +54,12 @@ public class JsonStreaming {
         module.addSerializer(new SourceSetSerializer(SourceSetImpl.class));
         module.addDeserializer(SourceSetImpl.class, new SourceSetDeserializer(SourceSetImpl.class));
         //FIXME at the moment, AAPIConfig does not have a @JsonProperty in Configuration, so it is skipped
+        return module;
+    }
+
+    public static ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(module);
+        mapper.registerModule(configModule());
         return mapper;
     }
 
