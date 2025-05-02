@@ -71,7 +71,8 @@ public record AnalyzerPropertyComputer(
         Map<String, Object> rawProperties = new LinkedHashMap<>();
         org.e2immu.analyzer.run.config.Configuration configuration = computeConfiguration(project, extension);
         try {
-            String json = JsonStreaming.objectMapper().writeValueAsString(configuration);
+            String json = JsonStreaming.objectMapper().writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(configuration);
             LOGGER.info("Configuration for project {}: {}", project.getDisplayName(), json);
         } catch (IOException io) {
             throw new RuntimeException(io);

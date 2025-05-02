@@ -37,7 +37,9 @@ public class WriteInputConfigurationTask extends ConventionTask {
             if (getOutputFile().getParentFile().mkdirs()) {
                 LOGGER.debug("Created parent directories for output file {}", getOutputFile());
             }
-            objectMapper.writerFor(InputConfigurationImpl.class).writeValue(getOutputFile(), inputConfiguration);
+            objectMapper.writerFor(InputConfigurationImpl.class)
+                    .withDefaultPrettyPrinter()
+                    .writeValue(getOutputFile(), inputConfiguration);
         } catch (IOException ioException) {
             LOGGER.error("Caught IOException", ioException);
         }
