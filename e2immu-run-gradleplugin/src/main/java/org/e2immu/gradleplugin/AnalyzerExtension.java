@@ -37,6 +37,7 @@ public class AnalyzerExtension {
     public String sourcePackages;
     public String testSourcePackages;
     public String excludeFromClasspath;
+    public String workingDirectory;
 
     /* from AnnotatedAPIConfiguration */
     // use case 1

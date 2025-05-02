@@ -175,6 +175,8 @@ public class JsonStreaming {
         @Override
         public void serialize(InputConfigurationImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException {
             gen.writeStartObject();
+            gen.writeStringField("workingDirectory", value.workingDirectory() == null ? null :
+                    value.workingDirectory().toString());
             gen.writeArrayFieldStart("classPathParts");
             for (SourceSet cpp : value.classPathParts()) {
                 gen.writeObject(cpp);

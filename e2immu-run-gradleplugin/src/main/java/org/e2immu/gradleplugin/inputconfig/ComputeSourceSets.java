@@ -40,6 +40,17 @@ public class ComputeSourceSets {
                          List<Result> sourceSetDependencies) {
     }
 
+    /*
+    all paths will be relative to this one
+     */
+    private final Path workingDirectory;
+
+    public ComputeSourceSets(Path workingDirectory) {
+        this.workingDirectory = workingDirectory;
+        assert this.workingDirectory.isAbsolute();
+        LOGGER.info("Working directory is {}", this.workingDirectory);
+    }
+
     public Result compute(Project project,
                           String restrictSourcesToPackages,
                           String restrictTestSourcesToPackages,
@@ -100,9 +111,9 @@ public class ComputeSourceSets {
                                 && !excludeFromClasspath.contains(description)
                                 && !excludeFromClasspath.contains(mci.getModule())) {
                                 SourceSet set = new SourceSetImpl(description,
-                                        null, file.toURI(), null, isTest, true,
-                                        true, false, isRuntimeOnly, null,
-                                        null);
+                                        null, toRelativePath(file).toUri(), null, isTest,
+                                        true, true, false, isRuntimeOnly,
+                                        null, null);
                                 sourceSetsByName.put(description, set);
                             }
                         }
@@ -157,6 +168,15 @@ public class ComputeSourceSets {
     }
 
 
+    Path toRelativePath(File file) {
+        Path path = file.getAbsoluteFile().toPath();
+        try {
+            return workingDirectory.relativize(path);
+        } catch (IllegalArgumentException iae) {
+            return path;
+        }
+    }
+
     private SourceSet makeSourceSet(org.gradle.api.tasks.SourceSet gradleSourceSet,
                                     String e2immuSourceSetName,
                                     String restrictTo,
@@ -168,7 +188,7 @@ public class ComputeSourceSets {
                         .collect(Collectors.toUnmodifiableSet());
         Charset sourceEncoding = encodingString == null ? null : Charset.forName(encodingString);
         List<Path> paths = gradleSourceSet.getAllJava().getSrcDirs().stream()
-                .filter(File::canRead).map(File::toPath).toList();
+                .filter(File::canRead).map(this::toRelativePath).toList();
         if (paths.isEmpty()) return null;
         Path path = paths.get(0);
         return new SourceSetImpl(e2immuSourceSetName, paths, path.toUri(),
@@ -185,5 +205,9 @@ public class ComputeSourceSets {
             }
         });
         return encodingRef.get();
+    }
+
+    Path getWorkingDirectory() {
+        return workingDirectory;
     }
 }

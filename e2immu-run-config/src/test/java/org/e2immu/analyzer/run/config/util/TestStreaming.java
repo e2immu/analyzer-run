@@ -32,7 +32,8 @@ public class TestStreaming {
                 StandardCharsets.UTF_8, true, false, false, false, false,
                 Set.of(), Set.of(sourceSet));
         sourceSet2.setAnalysisFingerPrint(MD5FingerPrint.compute("there"));
-        InputConfiguration inputConfiguration = new InputConfigurationImpl(List.of(sourceSet, sourceSet2), List.of(), Path.of("/"));
+        InputConfiguration inputConfiguration = new InputConfigurationImpl(Path.of("."),
+                List.of(sourceSet, sourceSet2), List.of(), Path.of("/"));
         String json = objectMapper.writeValueAsString(inputConfiguration);
         System.out.println(json);
 

@@ -66,6 +66,7 @@ tasks.check {
 project.group = "io.codelaser.build"
 
 e2immu {
+    workingDirectory = ""
     jmods = "java.base,java.xml"
     debugTargets = "classpath"
     sourcePackages = "org.e2immu.something.,org.e2immu.test.main"

@@ -39,6 +39,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -142,10 +143,15 @@ public record AnalyzerPropertyComputer(
 
         InputConfiguration.Builder builder = new InputConfigurationImpl.Builder();
         builder.setAlternativeJREDirectory(extension.jre);
+        Path workingDirectory = extension.workingDirectory == null || extension.workingDirectory.isBlank()
+                ? project.getLayout().getProjectDirectory().getAsFile().toPath()
+                : Path.of(extension.workingDirectory);
+        builder.setWorkingDirectory(workingDirectory.toString());
+        Path absoluteWorkingDirectory = workingDirectory.toAbsolutePath();
 
         Set<String> excludeFromClasspath = extension.excludeFromClasspath == null || extension.excludeFromClasspath.isBlank() ? Set.of() :
                 Arrays.stream(extension.excludeFromClasspath.split("[;,]\\s*")).collect(Collectors.toUnmodifiableSet());
-        ComputeSourceSets computeSourceSets = new ComputeSourceSets();
+        ComputeSourceSets computeSourceSets = new ComputeSourceSets(absoluteWorkingDirectory);
         ComputeSourceSets.Result result = computeSourceSets.compute(project, extension.sourcePackages,
                 extension.testSourcePackages, excludeFromClasspath);
 
