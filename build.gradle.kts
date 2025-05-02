@@ -8,4 +8,5 @@ tasks.register("clean") {
 tasks.register("publish") {
      dependsOn(gradle.includedBuild("e2immu-run-config").task(":publish"))
      dependsOn(gradle.includedBuild("e2immu-run-main").task(":publish"))
+     dependsOn(gradle.includedBuild("e2immu-run-gradleplugin").task(":publish"))
 }

@@ -12,6 +12,16 @@ public class JavaModules {
         if (jmodsString != null && !jmodsString.isBlank()) {
             String[] split = jmodsString.split("[,;]\\s*");
             Collections.addAll(jmods, split);
+            boolean change = true;
+            while (change) {
+                change = false;
+                Set<String> copy = new HashSet<>(jmods);
+                for (String jmod : copy) {
+                    for (String dep : jmodDependency(jmod)) {
+                        if (jmods.add(dep)) change = true;
+                    }
+                }
+            }
         }
         return jmods;
     }
