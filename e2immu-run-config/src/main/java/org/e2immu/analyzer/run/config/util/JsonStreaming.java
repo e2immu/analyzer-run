@@ -63,6 +63,16 @@ public class JsonStreaming {
         return mapper;
     }
 
+    private static boolean getBoolean(JsonNode node, String key) {
+        JsonNode value = node.get(key);
+        return value != null && value.asBoolean();
+    }
+
+    private static String getString(JsonNode node, String key, String defaultValue) {
+        JsonNode value = node.get(key);
+        return value == null ? defaultValue : value.asText();
+    }
+
     static class SourceSetDeserializer extends StdDeserializer<SourceSetImpl> {
 
         public SourceSetDeserializer(Class<?> vc) {
@@ -82,14 +92,14 @@ public class JsonStreaming {
             }
             String uriString = node.get("uri").asText("");
             URI uri = uriString.isBlank() ? null : URI.create(uriString);
-            String sourceEncodingString = node.get("sourceEncoding").asText("");
+            String sourceEncodingString = getString(node, "sourceEncoding", StandardCharsets.UTF_8.toString());
             Charset sourceEncoding = sourceEncodingString.isBlank() ? StandardCharsets.UTF_8 :
                     Charset.forName(sourceEncodingString);
-            boolean test = node.get("test").asBoolean(false);
-            boolean library = node.get("library").asBoolean(false);
-            boolean externalLibrary = node.get("externalLibrary").asBoolean(false);
-            boolean partOfJdk = node.get("partOfJdk").asBoolean(false);
-            boolean runtimeOnly = node.get("runtimeOnly").asBoolean(false);
+            boolean test = getBoolean(node, "test");
+            boolean library = getBoolean(node, "library");
+            boolean externalLibrary = getBoolean(node, "externalLibrary");
+            boolean partOfJdk = getBoolean(node, "partOfJdk");
+            boolean runtimeOnly = getBoolean(node, "runtimeOnly");
             Set<String> restrictToPackages = new HashSet<>();
             JsonNode restrictToPackagesNode = node.get("restrictToPackages");
             if (restrictToPackagesNode != null) {
@@ -112,11 +122,11 @@ public class JsonStreaming {
             }
             SourceSetImpl ssi = new SourceSetImpl(name, sourceDirectories, uri, sourceEncoding, test, library, externalLibrary,
                     partOfJdk, runtimeOnly, Set.copyOf(restrictToPackages), Set.copyOf(dependencies));
-            String fingerPrintToString = node.get("fingerPrint").asText("");
+            String fingerPrintToString = getString(node, "fingerPrint", "");
             if (!fingerPrintToString.isBlank()) {
                 ssi.setFingerPrint(MD5FingerPrint.from(fingerPrintToString));
             }
-            String analysisFingerPrintToString = node.get("analysisFingerPrint").asText("");
+            String analysisFingerPrintToString = getString(node, "analysisFingerPrint", "");
             if (!analysisFingerPrintToString.isBlank()) {
                 ssi.setAnalysisFingerPrint(MD5FingerPrint.from(analysisFingerPrintToString));
             }
@@ -135,34 +145,37 @@ public class JsonStreaming {
         @Override
         public void serialize(SourceSetImpl value, JsonGenerator gen, SerializerProvider provider) throws IOException {
             gen.writeStartObject();
-            gen.writeStringField("sourceEncoding", value.sourceEncoding() == null ? null
-                    : value.sourceEncoding().name());
+            if (value.sourceEncoding() != null) {
+                gen.writeStringField("sourceEncoding", value.sourceEncoding().name());
+            }
             gen.writeStringField("name", value.name());
-            gen.writeArrayFieldStart("sourceDirectories");
-            if (value.sourceDirectories() != null) {
+            if (value.sourceDirectories() != null && !value.sourceDirectories().isEmpty()) {
+                gen.writeArrayFieldStart("sourceDirectories");
                 for (Path dir : value.sourceDirectories()) gen.writeString(dir.toString());
+                gen.writeEndArray();
             }
-            gen.writeEndArray();
             gen.writeStringField("uri", value.uri().toString());
-            gen.writeBooleanField("test", value.test());
-            gen.writeBooleanField("library", value.library());
-            gen.writeBooleanField("externalLibrary", value.externalLibrary());
-            gen.writeBooleanField("partOfJdk", value.partOfJdk());
-            gen.writeBooleanField("runtimeOnly", value.runtimeOnly());
-            gen.writeArrayFieldStart("restrictToPackages");
+            if (value.test()) gen.writeBooleanField("test", value.test());
+            if (value.library()) gen.writeBooleanField("library", value.library());
+            if (value.externalLibrary()) gen.writeBooleanField("externalLibrary", value.externalLibrary());
+            if (value.partOfJdk()) gen.writeBooleanField("partOfJdk", value.partOfJdk());
+            if (value.runtimeOnly()) gen.writeBooleanField("runtimeOnly", value.runtimeOnly());
             if (value.restrictToPackages() != null) {
+                gen.writeArrayFieldStart("restrictToPackages");
                 for (String pkg : value.restrictToPackages()) gen.writeString(pkg);
+                gen.writeEndArray();
             }
-            gen.writeEndArray();
-            gen.writeArrayFieldStart("dependencies");
-            if (value.dependencies() != null) {
+            if (value.dependencies() != null && !value.dependencies().isEmpty()) {
+                gen.writeArrayFieldStart("dependencies");
                 for (SourceSet d : value.dependencies()) gen.writeString(d.name());
+                gen.writeEndArray();
             }
-            gen.writeEndArray();
-            gen.writeStringField("fingerPrint", value.fingerPrintOrNull() == null ? null
-                    : value.fingerPrintOrNull().toString());
-            gen.writeStringField("analysisFingerPrint", value.analysisFingerPrintOrNull() == null ? null
-                    : value.analysisFingerPrintOrNull().toString());
+            if (value.fingerPrintOrNull() != null && !value.fingerPrintOrNull().isNoFingerPrint()) {
+                gen.writeStringField("fingerPrint", value.fingerPrintOrNull().toString());
+            }
+            if (value.analysisFingerPrintOrNull() != null && !value.analysisFingerPrintOrNull().isNoFingerPrint()) {
+                gen.writeStringField("analysisFingerPrint", value.analysisFingerPrintOrNull().toString());
+            }
             gen.writeEndObject();
         }
     }

@@ -17,6 +17,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 public class TestStreaming {
     @Test
     public void test() throws JsonProcessingException {
@@ -39,7 +41,8 @@ public class TestStreaming {
 
         InputConfiguration copy = objectMapper.readerFor(InputConfiguration.class).readValue(json);
         Assertions.assertEquals(2, copy.sourceSets().size());
-        SourceSet set1 = copy.sourceSets().get(0);
+        assertNotNull(copy.sourceSets());
+        SourceSet set1 = copy.sourceSets().getFirst();
         Assertions.assertEquals("[a.b.c]", set1.restrictToPackages().toString());
         Assertions.assertEquals(fingerPrint1, set1.fingerPrintOrNull());
 
