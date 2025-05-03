@@ -155,8 +155,8 @@ public record AnalyzerPropertyComputer(
         ComputeSourceSets computeSourceSets = new ComputeSourceSets(absoluteWorkingDirectory);
         ComputeSourceSets.Result result = computeSourceSets.compute(project, extension.sourcePackages,
                 extension.testSourcePackages, excludeFromClasspath);
-
-        makeJavaModules(extension.jmods).forEach(set -> result.sourceSetsByName().put(set.name(), set));
+        Map<String, SourceSet> allSourceSetsByName = result.allSourceSetsByName();
+        makeJavaModules(extension.jmods).forEach(set -> allSourceSetsByName.put(set.name(), set));
 
         G<String> graph = new ComputeDependencies().go(result);
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
@@ -165,9 +165,9 @@ public record AnalyzerPropertyComputer(
         for (String name : linearization) {
             Map<V<String>, Long> edges = graph.edges(new V<>(name));
             Set<SourceSet> dependencies = edges == null ? Set.of() : edges.keySet()
-                    .stream().map(v -> result.sourceSetsByName().get(v.t()))
+                    .stream().map(v -> allSourceSetsByName.get(v.t()))
                     .filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
-            SourceSet sourceSet = result.sourceSetsByName().get(name);
+            SourceSet sourceSet = allSourceSetsByName.get(name);
             if (sourceSet == null) {
                 LOGGER.warn("Don't know source set {}", name);
             } else {

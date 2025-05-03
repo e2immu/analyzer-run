@@ -38,6 +38,11 @@ public class ComputeSourceSets {
 
     public record Result(String mainSourceSetName, Map<String, SourceSet> sourceSetsByName,
                          List<Result> sourceSetDependencies) {
+        public Map<String, SourceSet> allSourceSetsByName() {
+            Map<String, SourceSet> map = new HashMap<>(sourceSetsByName);
+            sourceSetDependencies.forEach(r -> map.putAll(r.allSourceSetsByName()));
+            return map;
+        }
     }
 
     /*
@@ -190,7 +195,7 @@ public class ComputeSourceSets {
         List<Path> paths = gradleSourceSet.getAllJava().getSrcDirs().stream()
                 .filter(File::canRead).map(this::toRelativePath).toList();
         if (paths.isEmpty()) return null;
-        Path path = paths.get(0);
+        Path path = paths.getFirst();
         return new SourceSetImpl(e2immuSourceSetName, paths, path.toUri(),
                 sourceEncoding, test, false, false, false, false,
                 restrictToPackages, null);

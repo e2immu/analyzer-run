@@ -30,6 +30,7 @@ public class ComputeDependencies {
         HashSet<String> seen = new HashSet<>();
         recursionForClassPathParts(builder, result, seen, jmods, jmodsAndExternalToMain);
 
+        LOGGER.info(" -- now recursing for source sets");
         recursionForSourceSets(builder, result, seen, jmodsAndExternalToMain);
         return builder.build();
     }
@@ -60,6 +61,8 @@ public class ComputeDependencies {
     private List<String> recursionForSourceSets(G.Builder<String> builder, ComputeSourceSets.Result result,
                                                 Set<String> seen, Map<String, Boolean> jmodsAndExternalToMain) {
         if (!seen.add(result.mainSourceSetName())) return List.of();
+        LOGGER.info("Enter recursion for {}, have {} dependencies",
+                result.mainSourceSetName(), result.sourceSetDependencies().size());
 
         // depth first
         List<String> dependentSourceSets = new ArrayList<>();
@@ -78,8 +81,6 @@ public class ComputeDependencies {
                     if (sourceSet.test() || isMain) {
                         LOGGER.info("Adding SRC->EXT/JMOD {} -> {}", name, je);
                         builder.add(name, List.of(je));
-                    } else {
-                        LOGGER.info("Ignoring SRC->EXT/JMOD {} -> {}", name, je);
                     }
                 });
                 LOGGER.info("Adding SRC->DEP {} -> {}", name, dependentSourceSets);
@@ -96,6 +97,7 @@ public class ComputeDependencies {
             LOGGER.info("ADDING SRC MAIN->TEST {} -> {}", testName, mainSourceSets);
             builder.add(testName, mainSourceSets);
         }
+        LOGGER.info("Ended recursion for {}", result.mainSourceSetName());
         return mainSourceSets;
     }
 
