@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.*;
@@ -80,6 +81,9 @@ public class ComputeSourceSets {
                 .getByType(JavaPluginExtension.class);
         Map<String, SourceSet> sourceSetsByName = new HashMap<>();
         String projectName = project.getName();
+
+        Set<File> mainClasspath = new HashSet<>();
+        Set<File> testClasspath = new HashSet<>();
         for (org.gradle.api.tasks.SourceSet gradleSourceSet : javaPluginExtension.getSourceSets()) {
             String sourceSetName = projectName + "/" + gradleSourceSet.getName();
             boolean test = gradleSourceSet.getName().toLowerCase().contains("test");
@@ -87,18 +91,25 @@ public class ComputeSourceSets {
                     test ? restrictTestSourcesToPackages : restrictSourcesToPackages,
                     encoding, test);
             if (sourceSet != null) sourceSetsByName.put(sourceSet.name(), sourceSet);
+
+            gradleSourceSet.getCompileClasspath().getFiles().stream().filter(File::canRead).forEach(file -> {
+                if (test) testClasspath.add(file);
+                else mainClasspath.add(file);
+            });
         }
+
         List<Result> sourceSetDependencies = new ArrayList<>();
         List<Configuration> configurations = sortConfigurations(project);
         inspectConfigurations(project, excludeFromClasspath, projectsSeen, configurations, sourceSetsByName,
-                sourceSetDependencies);
+                sourceSetDependencies, mainClasspath, testClasspath);
         String mainSourceSetName = projectName + "/main";
         return new Result(mainSourceSetName, sourceSetsByName, sourceSetDependencies);
     }
 
     private void inspectConfigurations(Project project, Set<String> excludeFromClasspath, Set<String> projectsSeen,
                                        List<Configuration> configurations, Map<String, SourceSet> sourceSetsByName,
-                                       List<Result> sourceSetDependencies) {
+                                       List<Result> sourceSetDependencies,
+                                       Set<File> mainClassPath, Set<File> testClasspath) {
         for (Configuration configuration : configurations) {
             if (configuration.isCanBeResolved()) {
                 String configurationName = configuration.getName();
@@ -125,7 +136,7 @@ public class ComputeSourceSets {
                     } else if (rar.getVariant().getOwner() instanceof DefaultProjectComponentIdentifier pci) {
                         String description = pci.getProjectName();
                         Project dependentProject = findProject(project, pci.getProjectName());
-                        if (dependentProject != null && !dependentProject.equals(project)) {
+                        if (dependentProject != null) {
                             if (!projectsSeen.contains(description)) {
                                 LOGGER.info(" --  project dependency {} in configuration {}, looking for path {}", description,
                                         configurationName, pci.getProjectIdentity());
@@ -135,8 +146,27 @@ public class ComputeSourceSets {
                                 sourceSetDependencies.add(result);
                             }
                         } else {
-                            LOGGER.info(" --  ignoring project dependency {} in configuration {}, not found",
-                                    description, configurationName);
+                            String projectName = pci.getProjectName();
+                            File file;
+                            File inMain = mainClassPath.stream()
+                                    .filter(f -> f.getPath().contains(projectName)).findFirst().orElse(null);
+                            if (isTest && inMain == null) {
+                                file = testClasspath.stream().filter(f -> f.getPath().contains(projectName))
+                                        .findFirst().orElse(null);
+                            } else {
+                                file = inMain;
+                            }
+                            if (file != null) {
+                                SourceSet sourceSet = new SourceSetImpl(projectName, null,
+                                        URI.create("file:" + file.getPath()), null, isTest, true,
+                                        true, false, false, null,
+                                        null);
+                                sourceSetsByName.putIfAbsent(projectName, sourceSet);
+                                LOGGER.info(" --  added project dependency via classpath: {}", file);
+                            } else {
+                                LOGGER.info(" --  ignoring project dependency {} in configuration {}, not found",
+                                        description, configurationName);
+                            }
                         }
                     }
                 }
@@ -163,13 +193,8 @@ public class ComputeSourceSets {
     }
 
     private Project findProject(Project project, String projectName) {
-        Project local = project.getRootProject().getAllprojects().stream()
+        return project.getRootProject().getAllprojects().stream()
                 .filter(p -> p.getName().equals(projectName)).findFirst().orElse(null);
-        if (local != null) return local;
-        //for (IncludedBuild ib : project.getGradle().getIncludedBuilds()) {
-        //   LOGGER.info("included build: {} at {}", ib.getName(), ib.getProjectDir());
-        //}
-        return null;
     }
 
 

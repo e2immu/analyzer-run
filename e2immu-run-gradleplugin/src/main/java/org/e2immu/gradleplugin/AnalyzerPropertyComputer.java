@@ -68,7 +68,6 @@ public record AnalyzerPropertyComputer(
         if (extension.skipProject) {
             return;
         }
-        Map<String, Object> rawProperties = new LinkedHashMap<>();
         org.e2immu.analyzer.run.config.Configuration configuration = computeConfiguration(project, extension);
         try {
             String json = JsonStreaming.objectMapper().writerWithDefaultPrettyPrinter()
@@ -155,13 +154,13 @@ public record AnalyzerPropertyComputer(
         ComputeSourceSets computeSourceSets = new ComputeSourceSets(absoluteWorkingDirectory);
         ComputeSourceSets.Result result = computeSourceSets.compute(project, extension.sourcePackages,
                 extension.testSourcePackages, excludeFromClasspath);
-        Map<String, SourceSet> allSourceSetsByName = result.allSourceSetsByName();
-        makeJavaModules(extension.jmods).forEach(set -> allSourceSetsByName.put(set.name(), set));
+        makeJavaModules(extension.jmods).forEach(set -> result.sourceSetsByName().put(set.name(), set));
 
         G<String> graph = new ComputeDependencies().go(result);
         List<String> linearization = Linearize.linearize(graph).asList(String::compareToIgnoreCase);
         LOGGER.info("Graph: {}", graph);
         LOGGER.info("Linearization:\n  {}\n", String.join("\n  ", linearization));
+        Map<String, SourceSet> allSourceSetsByName = result.allSourceSetsByName();
         for (String name : linearization) {
             Map<V<String>, Long> edges = graph.edges(new V<>(name));
             Set<SourceSet> dependencies = edges == null ? Set.of() : edges.keySet()
