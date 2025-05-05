@@ -26,6 +26,12 @@ public class JavaModules {
         return jmods;
     }
 
+    /*
+    How to find the dependencies of jdk.* modules?
+
+    jar xf /opt/homebrew/Cellar/openjdk/23.0.2/libexec/openjdk.jdk/Contents/Home/jmods/jdk.unsupported.jmod classes/module-info.class
+    javap classes/module-info.class
+     */
     public static Set<String> jmodDependency(String jmod) {
         return switch (jmod) {
             case "java.base" -> Set.of();
@@ -40,7 +46,8 @@ public class JavaModules {
             case "java.compiler", "java.datatransfer", "java.instrument",
                  "java.logging", "java.management", "java.naming", "java.net.http", "java.prefs", "java.rmi",
                  "java.scripting", "java.security.jgss", "java.security.sasl", "java.smartcardio",
-                 "java.transaction.xa", "java.xml" -> Set.of("java.base");
+                 "java.transaction.xa", "java.xml",
+                 "jdk.unsupported" -> Set.of("java.base");
             default -> throw new UnsupportedOperationException("Implement: " + jmod);
         };
     }
