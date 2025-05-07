@@ -61,7 +61,7 @@ dependencies {
     implementation("org.e2immu:e2immu-modification-prepwork:${version}")
     implementation("org.e2immu:e2immu-modification-linkedvariables:${version}")
 
-    implementation("org.e2immu:e2immu-run-config:0.0.1")
+    implementation("org.e2immu:e2immu-run-config:${version}")
 
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("commons-cli:commons-cli:1.4")
