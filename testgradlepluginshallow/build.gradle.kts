@@ -25,14 +25,17 @@ repositories {
 // see https://docs.gradle.org/current/userguide/testing_gradle_plugins.html
 val functionalTest: SourceSet by sourceSets.creating
 
+val jupiterApiVersion = project.findProperty("jupiterApiVersion") as String
+val jupiterEngineVersion = project.findProperty("jupiterEngineVersion") as String
+
 dependencies {
     implementation(gradleApi())
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3") // used in tests -> auto
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterApiVersion") // used in tests -> auto
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$jupiterEngineVersion")
 
-    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter-api:5.9.3")
-    "functionalTestRuntimeOnly"("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter-api:$jupiterApiVersion")
+    "functionalTestRuntimeOnly"("org.junit.jupiter:junit-jupiter-engine:$jupiterEngineVersion")
     "functionalTestImplementation"(gradleTestKit())
 }
 

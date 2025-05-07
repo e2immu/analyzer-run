@@ -14,7 +14,7 @@
 
 
 plugins {
-    java
+    `java-library`
     `maven-publish`
 }
 
@@ -37,14 +37,19 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation("org.e2immu:e2immu-cst-api:${version}")
-    implementation("org.e2immu:e2immu-cst-impl:${version}")
-    implementation("org.e2immu:e2immu-inspection-api:${version}")
-    implementation("org.e2immu:e2immu-inspection-resource:${version}")
-    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
+val slf4jVersion = project.findProperty("slf4jVersion") as String
+val jupiterApiVersion = project.findProperty("jupiterApiVersion") as String
+val jupiterEngineVersion = project.findProperty("jupiterEngineVersion") as String
 
-    implementation("org.slf4j:slf4j-api:2.0.7")
+dependencies {
+    api("org.e2immu:e2immu-cst-api:$version")
+    api("org.e2immu:e2immu-inspection-api:$version")
+
+    implementation("org.e2immu:e2immu-cst-impl:$version")
+    implementation("org.e2immu:e2immu-inspection-resource:$version")
+    implementation("org.e2immu:e2immu-shallow-analyzer:$version")
+
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
 }
 
 

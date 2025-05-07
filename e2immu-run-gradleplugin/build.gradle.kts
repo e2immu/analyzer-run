@@ -23,7 +23,6 @@ group = "org.e2immu"
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
-    withSourcesJar()
 }
 
 repositories {
@@ -37,27 +36,33 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation("org.e2immu:e2immu-external-support:${version}")
-    implementation("org.e2immu:e2immu-internal-util:${version}")
-    implementation("org.e2immu:e2immu-internal-graph:${version}")
-    implementation("org.e2immu:e2immu-cst-api:${version}")
-    implementation("org.e2immu:e2immu-cst-impl:${version}")
-    implementation("org.e2immu:e2immu-inspection-api:${version}")
-    implementation("org.e2immu:e2immu-inspection-resource:${version}")
-    implementation("org.e2immu:e2immu-shallow-analyzer:${version}")
-    implementation("org.e2immu:e2immu-modification-prepwork:${version}")
-    implementation("org.e2immu:e2immu-run-config:${version}")
-    implementation("org.e2immu:e2immu-run-main:${version}")
+val slf4jVersion = project.findProperty("slf4jVersion") as String
+val jupiterApiVersion = project.findProperty("jupiterApiVersion") as String
+val jupiterEngineVersion = project.findProperty("jupiterEngineVersion") as String
+val logbackClassicVersion = project.findProperty("logbackClassicVersion") as String
+val jacksonVersion = project.findProperty("jacksonVersion") as String
 
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
-    implementation("org.slf4j:slf4j-api:2.0.7")
+dependencies {
+    implementation("org.e2immu:e2immu-external-support:$version")
+    implementation("org.e2immu:e2immu-internal-util:$version")
+    implementation("org.e2immu:e2immu-internal-graph:$version")
+    implementation("org.e2immu:e2immu-cst-api:$version")
+    implementation("org.e2immu:e2immu-cst-impl:$version")
+    implementation("org.e2immu:e2immu-inspection-api:$version")
+    implementation("org.e2immu:e2immu-inspection-resource:$version")
+    implementation("org.e2immu:e2immu-shallow-analyzer:$version")
+    implementation("org.e2immu:e2immu-modification-prepwork:$version")
+    implementation("org.e2immu:e2immu-run-config:$version")
+    implementation("org.e2immu:e2immu-run-main:$version")
+
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
 
     // GRADLE PLUGIN
     implementation(gradleApi())
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterApiVersion")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$jupiterEngineVersion")
 }
 
 gradlePlugin {
