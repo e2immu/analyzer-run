@@ -129,7 +129,7 @@ public class RunAnalyzer implements Runnable {
             filter = new PackageFilter(ac.annotatedApiPackages());
             LOGGER.info("Created package filter based on {}", ac.annotatedApiPackages());
         }
-        Composer composer = new Composer(javaInspector.runtime(), destinationPackage, filter);
+        Composer composer = new Composer(javaInspector, set -> destinationPackage, filter);
         List<TypeInfo> compiledPrimaryTypes = javaInspector.compiledTypesManager()
                 .typesLoaded().stream().filter(TypeInfo::isPrimaryType).toList();
         LOGGER.info("Loaded {} compiled primary types", compiledPrimaryTypes.size());
@@ -141,7 +141,7 @@ public class RunAnalyzer implements Runnable {
 
         List<TypeInfo> primaryTypes = Stream.concat(compiledPrimaryTypes.stream(), sourcePrimaryTypes.stream()).toList();
         Collection<TypeInfo> apiTypes = composer.compose(primaryTypes);
-        composer.write(apiTypes, ac.annotatedApiTargetDir(), () -> null);
+        composer.write(apiTypes, ac.annotatedApiTargetDir(), null);
 
         LOGGER.info("End of e2immu main, AAPI skeleton generation mode.");
     }
