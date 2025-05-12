@@ -15,11 +15,11 @@
 package org.e2immu.gradleplugin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.run.config.util.JavaModules;
 import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.analyzer.run.main.Main;
-import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
 import org.e2immu.gradleplugin.inputconfig.ComputeDependencies;
 import org.e2immu.gradleplugin.inputconfig.ComputeSourceSets;
 import org.e2immu.language.cst.api.element.SourceSet;

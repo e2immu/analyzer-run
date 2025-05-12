@@ -60,7 +60,9 @@ dependencies {
     implementation("org.e2immu:e2immu-inspection-integration:$version")
     implementation("org.e2immu:e2immu-inspection-parser:$version")
 
-    implementation("org.e2immu:e2immu-shallow-analyzer:$version")
+    implementation("org.e2immu:e2immu-modification-common:$version")
+    implementation("org.e2immu:e2immu-modification-io:$version")
+    implementation("org.e2immu:e2immu-aapi-parser:$version")
 
     implementation("org.e2immu:e2immu-modification-prepwork:$version")
     implementation("org.e2immu:e2immu-modification-linkedvariables:$version")

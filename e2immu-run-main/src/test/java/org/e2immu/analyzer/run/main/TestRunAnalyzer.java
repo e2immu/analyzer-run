@@ -1,8 +1,7 @@
 package org.e2immu.analyzer.run.main;
 
 import ch.qos.logback.classic.Level;
-import org.e2immu.analyzer.shallow.analyzer.ToolChain;
-import org.e2immu.language.inspection.integration.JavaInspectorImpl;
+import org.e2immu.language.inspection.integration.ToolChain;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

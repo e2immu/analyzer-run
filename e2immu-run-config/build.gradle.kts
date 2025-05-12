@@ -51,7 +51,7 @@ dependencies {
     api("org.e2immu:e2immu-inspection-api:$version")
     implementation("org.e2immu:e2immu-cst-impl:$version")
     implementation("org.e2immu:e2immu-inspection-resource:$version")
-    implementation("org.e2immu:e2immu-shallow-analyzer:$version")
+    implementation("org.e2immu:e2immu-aapi-parser:$version")
 
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
