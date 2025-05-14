@@ -1,9 +1,14 @@
 package org.e2immu.analyzer.run.main;
 
+import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfiguration;
+import org.e2immu.analyzer.aapi.parser.AnnotatedApiParser;
+import org.e2immu.analyzer.aapi.parser.Composer;
+import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
+import org.e2immu.analyzer.modification.io.LoadAnalyzedPackageFiles;
+import org.e2immu.analyzer.modification.io.WriteAnalysis;
 import org.e2immu.analyzer.modification.prepwork.hct.ComputeHiddenContent;
 import org.e2immu.analyzer.modification.prepwork.hct.HiddenContentTypes;
 import org.e2immu.analyzer.run.config.Configuration;
-import org.e2immu.analyzer.shallow.analyzer.*;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
@@ -56,7 +61,7 @@ public class RunAnalyzer implements Runnable {
         JavaInspector javaInspector = new JavaInspectorImpl();
         javaInspector.initialize(configuration.inputConfiguration());
         AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
-        new LoadAnalyzedPackageFiles().go(javaInspector, ac);
+        new LoadAnalyzedPackageFiles().go(javaInspector, ac.analyzedAnnotatedApiDirs());
 
         JavaInspector.ParseOptions parseOptions = new JavaInspectorImpl.ParseOptionsBuilder().setFailFast(false).build();
         Summary summary = javaInspector.parse(parseOptions);
@@ -65,7 +70,7 @@ public class RunAnalyzer implements Runnable {
             return;
         }
         List<String> analysisSteps = configuration.generalConfiguration().analysisSteps();
-        if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.get(0))) {
+        if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.getFirst())) {
             return;
         }
         boolean empty = analysisSteps.isEmpty();
@@ -103,9 +108,9 @@ public class RunAnalyzer implements Runnable {
 
         annotatedApiParser.initialize(configuration.inputConfiguration(), ac);
         LOGGER.info("AAPI parser finds {} types", annotatedApiParser.types().size());
-        ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser);
+        ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser.runtime(), annotatedApiParser);
         Trie<TypeInfo> trie = new Trie<>();
-        List<TypeInfo> types = shallowAnalyzer.go();
+        List<TypeInfo> types = shallowAnalyzer.go(annotatedApiParser.typesParsed());
         LOGGER.info("Shallow analyzer found {} types", types.size());
         annotatedApiParser.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
         WriteAnalysis writeAnalysis = new WriteAnalysis(annotatedApiParser.runtime());

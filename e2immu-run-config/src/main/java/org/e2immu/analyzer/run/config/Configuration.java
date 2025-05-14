@@ -2,8 +2,8 @@ package org.e2immu.analyzer.run.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfiguration;
-import org.e2immu.analyzer.shallow.analyzer.AnnotatedAPIConfigurationImpl;
+import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfiguration;
+import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfigurationImpl;
 import org.e2immu.language.cst.api.runtime.LanguageConfiguration;
 import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
 import org.e2immu.language.inspection.api.resource.InputConfiguration;
