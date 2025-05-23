@@ -67,7 +67,7 @@ public class RunAnalyzer implements Runnable {
             return;
         }
         List<String> analysisSteps = configuration.generalConfiguration().analysisSteps();
-        if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.get(0))) {
+        if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.getFirst())) {
             return;
         }
         boolean empty = analysisSteps.isEmpty();
@@ -105,10 +105,11 @@ public class RunAnalyzer implements Runnable {
 
         annotatedApiParser.initialize(configuration.inputConfiguration(), ac);
         LOGGER.info("AAPI parser finds {} types", annotatedApiParser.types().size());
-        ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser.runtime(), annotatedApiParser);
+        ShallowAnalyzer shallowAnalyzer = new ShallowAnalyzer(annotatedApiParser.runtime(), annotatedApiParser,
+                true);
         Trie<TypeInfo> trie = new Trie<>();
-        List<TypeInfo> types = shallowAnalyzer.go(annotatedApiParser.types());
-        LOGGER.info("Shallow analyzer found {} types", types.size());
+        ShallowAnalyzer.Result rs = shallowAnalyzer.go(annotatedApiParser.typesParsed());
+        LOGGER.info("Shallow analyzer found {} types", rs.allTypes().size());
         annotatedApiParser.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
         WriteAnalysis writeAnalysis = new WriteAnalysis(annotatedApiParser.runtime());
         writeAnalysis.write(ac.analyzedAnnotatedApiTargetDir(), trie);
