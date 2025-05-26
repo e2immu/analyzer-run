@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.*;
@@ -127,7 +128,7 @@ public class ComputeSourceSets {
                                 && !excludeFromClasspath.contains(description)
                                 && !excludeFromClasspath.contains(mci.getModule())) {
                                 SourceSet set = new SourceSetImpl(description,
-                                        null, toRelativePath(file).toUri(), null, isTest,
+                                        null, makeURI(toRelativePath(file)), null, isTest,
                                         true, true, false, isRuntimeOnly,
                                         null, null);
                                 sourceSetsByName.put(description, set);
@@ -158,7 +159,7 @@ public class ComputeSourceSets {
                             }
                             if (file != null) {
                                 SourceSet sourceSet = new SourceSetImpl(projectName, null,
-                                        URI.create("file:" + file.getPath()), null, isTest, true,
+                                        makeURI(toRelativePath(file)), null, isTest, true,
                                         true, false, false, null,
                                         null);
                                 sourceSetsByName.putIfAbsent(projectName, sourceSet);
@@ -207,6 +208,11 @@ public class ComputeSourceSets {
         }
     }
 
+    static URI makeURI(Path path) {
+        assert !path.isAbsolute();
+        return URI.create("file:"+path);
+    }
+
     private SourceSet makeSourceSet(org.gradle.api.tasks.SourceSet gradleSourceSet,
                                     String e2immuSourceSetName,
                                     String restrictTo,
@@ -221,7 +227,7 @@ public class ComputeSourceSets {
                 .filter(File::canRead).map(this::toRelativePath).toList();
         if (paths.isEmpty()) return null;
         Path path = paths.getFirst();
-        return new SourceSetImpl(e2immuSourceSetName, paths, path.toUri(),
+        return new SourceSetImpl(e2immuSourceSetName, paths, makeURI(path),
                 sourceEncoding, test, false, false, false, false,
                 restrictToPackages, null);
     }
