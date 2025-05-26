@@ -20,7 +20,7 @@ public class TestComputeSourceSets {
         assertFalse(srcMainJava.isAbsolute());
         Path absSrcMainJava = srcMainJava.toAbsolutePath();
         assertTrue(absSrcMainJava.isAbsolute());
-        Path relativeAgain = css.toRelativePath(absSrcMainJava.toFile());
+        Path relativeAgain = css.improveRelativePathKeepAbsolute(absSrcMainJava.toFile());
         assertEquals(srcMainJava, relativeAgain);
     }
 }
