@@ -19,7 +19,7 @@ sourceSets {
 
 repositories {
     maven {
-        url = uri(project.findProperty("codeartifactUri") as String)
+        url = uri(project.findProperty("codeartifactPublicUri") as String)
         credentials {
             username = "aws"
             password = project.findProperty("codeartifactToken") as String

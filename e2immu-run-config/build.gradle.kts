@@ -31,7 +31,7 @@ tasks.test {
 
 repositories {
     maven {
-        url = uri(project.findProperty("codeartifactUri") as String)
+        url = uri(project.findProperty("codeartifactPublicUri") as String)
         credentials {
             username = "aws"
             password = project.findProperty("codeartifactToken") as String
@@ -49,6 +49,7 @@ val jacksonVersion = project.findProperty("jacksonVersion") as String
 dependencies {
     api("org.e2immu:e2immu-cst-api:$version")
     api("org.e2immu:e2immu-inspection-api:$version")
+    implementation("org.e2immu:e2immu-internal-graph:$version")
     implementation("org.e2immu:e2immu-cst-impl:$version")
     implementation("org.e2immu:e2immu-inspection-resource:$version")
     implementation("org.e2immu:e2immu-aapi-parser:$version")
@@ -64,7 +65,7 @@ dependencies {
 publishing {
     repositories {
         maven {
-            url = uri(project.findProperty("publishUri") as String)
+            url = uri(project.findProperty("publishPublicUri") as String)
             credentials {
                 username = project.findProperty("publishUsername") as String
                 password = project.findProperty("publishPassword") as String
