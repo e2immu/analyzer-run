@@ -2,6 +2,9 @@
 tasks.register("test") {
     dependsOn(gradle.includedBuilds.map { it.task(":test") })
 }
+tasks.register("testClasses") {
+    dependsOn(gradle.includedBuilds.map { it.task(":testClasses") })
+}
 tasks.register("clean") {
     dependsOn(gradle.includedBuilds.map { it.task(":clean") })
 }

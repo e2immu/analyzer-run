@@ -1,10 +1,12 @@
 package org.e2immu.analyzer.run.main;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.cli.*;
-import org.e2immu.analyzer.run.config.Configuration;
-import org.e2immu.analyzer.run.config.GeneralConfiguration;
 import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfiguration;
 import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfigurationImpl;
+import org.e2immu.analyzer.run.config.Configuration;
+import org.e2immu.analyzer.run.config.GeneralConfiguration;
+import org.e2immu.analyzer.run.config.util.JsonStreaming;
 import org.e2immu.language.cst.impl.runtime.LanguageConfigurationImpl;
 import org.e2immu.language.inspection.api.resource.InputConfiguration;
 import org.e2immu.language.inspection.resource.InputConfigurationImpl;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -40,11 +43,13 @@ public class Main {
 
     public static final String AS_NONE = "none";
     public static final String AS_PREP = "prep";
-    public static final String AS_ANALYSIS_ORDER = "analyis-order";
+    public static final String AS_ANALYSIS_ORDER = "analysis-order";
     public static final String AS_MODIFICATION = "modification";
 
     public static final String ANALYSIS_RESULTS_DIR = "analysis-results-dir";
     public static final String DEBUG = "debug";
+
+    public static final String INPUT_CONFIGURATION = "input-configuration";
 
     public static final String SOURCE = "source";
     public static final String TEST_SOURCE = "test-source";
@@ -92,10 +97,13 @@ public class Main {
         } catch (ParseException parseException) {
             LOGGER.error("Parse exception: ", parseException);
             System.exit(EXIT_INTERNAL_EXCEPTION);
+        } catch (IOException ioException) {
+            LOGGER.error("IOException: ", ioException);
+            System.exit(EXIT_IO_EXCEPTION);
         }
     }
 
-    private static int execute(String[] args) throws ParseException {
+    private static int execute(String[] args) throws ParseException, IOException {
         CommandLineParser commandLineParser = new DefaultParser();
         Options options = createOptions();
         CommandLine cmd = commandLineParser.parse(options, args);
@@ -125,7 +133,7 @@ public class Main {
         return options;
     }
 
-    private static Configuration parseConfiguration(CommandLine cmd, Options options) {
+    private static Configuration parseConfiguration(CommandLine cmd, Options options) throws IOException {
         if (cmd.hasOption(HELP)) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.setOptionComparator(null);
@@ -225,6 +233,9 @@ public class Main {
     /* ******* input configuration ******** */
 
     private static void addInputConfigurationOptions(Options options) {
+        options.addOption(Option.builder().longOpt(INPUT_CONFIGURATION).hasArg().argName("FILE")
+                .desc("Directly specify the input configuration file").build());
+
         options.addOption(Option.builder().longOpt(JRE).hasArg().argName("DIR")
                 .desc("Provide an alternative location for the Java Runtime Environment (JRE). " +
                       "If absent, the JRE from the analyser is used: '" + System.getProperty("java.home") + "'.").build());
@@ -295,7 +306,14 @@ public class Main {
         }
     }
 
-    private static InputConfiguration parseInputConfiguration(CommandLine cmd, GeneralConfiguration generalConfiguration) {
+    private static InputConfiguration parseInputConfiguration(CommandLine cmd, GeneralConfiguration generalConfiguration) throws IOException {
+        String inputConfigurationFile = cmd.getOptionValue(INPUT_CONFIGURATION);
+        if (inputConfigurationFile != null) {
+            ObjectMapper objectMapper = JsonStreaming.objectMapper();
+            File file = new File(inputConfigurationFile);
+            LOGGER.info("Reading inputConfiguration from file {}", inputConfigurationFile);
+            return objectMapper.readValue(file, InputConfigurationImpl.class);
+        }
         InputConfigurationImpl.Builder builder = new InputConfigurationImpl.Builder();
 
         String alternativeJREDirectory = cmd.getOptionValue(JRE);

@@ -14,7 +14,7 @@
 
 
 plugins {
-    java
+    application
     `maven-publish`
 }
 
@@ -40,6 +40,7 @@ val slf4jVersion = project.findProperty("slf4jVersion") as String
 val jupiterApiVersion = project.findProperty("jupiterApiVersion") as String
 val jupiterEngineVersion = project.findProperty("jupiterEngineVersion") as String
 val logbackClassicVersion = project.findProperty("logbackClassicVersion") as String
+val jacksonVersion = project.findProperty("jacksonVersion") as String
 
 dependencies {
     implementation("org.e2immu:e2immu-external-support:$version")
@@ -74,8 +75,15 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackClassicVersion")
     implementation("commons-cli:commons-cli:1.4")
 
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+
+
     testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterApiVersion")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$jupiterEngineVersion")
+}
+
+application {
+    mainClass = "org.e2immu.analyzer.run.main.Main"
 }
 
 tasks.test {

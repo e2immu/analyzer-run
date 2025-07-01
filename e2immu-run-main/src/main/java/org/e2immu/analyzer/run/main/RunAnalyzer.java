@@ -1,5 +1,6 @@
 package org.e2immu.analyzer.run.main;
 
+import ch.qos.logback.classic.Level;
 import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
 import org.e2immu.analyzer.modification.prepwork.hct.ComputeHiddenContent;
 import org.e2immu.analyzer.modification.prepwork.hct.HiddenContentTypes;
@@ -55,12 +56,17 @@ public class RunAnalyzer implements Runnable {
     }
 
     private void runAnalyzer() throws IOException {
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)).setLevel(Level.INFO);
+
         JavaInspector javaInspector = new JavaInspectorImpl();
         javaInspector.initialize(configuration.inputConfiguration());
         AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
         new LoadAnalyzedPackageFiles().go(javaInspector, ac.analyzedAnnotatedApiDirs());
 
-        JavaInspector.ParseOptions parseOptions = new JavaInspectorImpl.ParseOptionsBuilder().setFailFast(false).build();
+        JavaInspector.ParseOptions parseOptions = new JavaInspectorImpl.ParseOptionsBuilder()
+                .setDetailedSources(true)
+                .setFailFast(true)
+                .build();
         Summary summary = javaInspector.parse(parseOptions);
         if (summary.haveErrors()) {
             LOGGER.error("Have parsing errors, bailing out");

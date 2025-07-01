@@ -12,18 +12,28 @@ public class JavaModules {
         if (jmodsString != null && !jmodsString.isBlank()) {
             String[] split = jmodsString.split("[,;]\\s*");
             Collections.addAll(jmods, split);
-            boolean change = true;
-            while (change) {
-                change = false;
-                Set<String> copy = new HashSet<>(jmods);
-                for (String jmod : copy) {
-                    for (String dep : jmodDependency(jmod)) {
-                        if (jmods.add(dep)) change = true;
-                    }
+            addClosure(jmods);
+        }
+        return jmods;
+    }
+
+    private static void addClosure(Set<String> jmods) {
+        boolean change = true;
+        while (change) {
+            change = false;
+            Set<String> copy = new HashSet<>(jmods);
+            for (String jmod : copy) {
+                for (String dep : jmodDependency(jmod)) {
+                    if (jmods.add(dep)) change = true;
                 }
             }
         }
-        return jmods;
+    }
+
+    public static Set<String> jmodDependencyClosure(String jmod) {
+        Set<String> set = new HashSet<>(jmodDependency(jmod));
+        addClosure(set);
+        return set;
     }
 
     /*
