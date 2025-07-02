@@ -1,12 +1,15 @@
 package org.e2immu.analyzer.run.main;
 
 import ch.qos.logback.classic.Level;
+import org.e2immu.analyzer.aapi.parser.AnnotatedAPIConfiguration;
+import org.e2immu.analyzer.aapi.parser.AnnotatedApiParser;
+import org.e2immu.analyzer.aapi.parser.Composer;
 import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
+import org.e2immu.analyzer.modification.io.LoadAnalyzedPackageFiles;
+import org.e2immu.analyzer.modification.io.WriteAnalysis;
 import org.e2immu.analyzer.modification.prepwork.hct.ComputeHiddenContent;
 import org.e2immu.analyzer.modification.prepwork.hct.HiddenContentTypes;
 import org.e2immu.analyzer.run.config.Configuration;
-import org.e2immu.analyzer.aapi.parser.*;
-import org.e2immu.analyzer.modification.io.*;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
@@ -66,6 +69,7 @@ public class RunAnalyzer implements Runnable {
         JavaInspector.ParseOptions parseOptions = new JavaInspectorImpl.ParseOptionsBuilder()
                 .setDetailedSources(true)
                 .setFailFast(true)
+                .setParallel(configuration.generalConfiguration().parallel())
                 .build();
         Summary summary = javaInspector.parse(parseOptions);
         if (summary.haveErrors()) {
