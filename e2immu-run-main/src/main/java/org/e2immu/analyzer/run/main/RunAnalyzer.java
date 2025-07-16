@@ -7,12 +7,14 @@ import org.e2immu.analyzer.aapi.parser.Composer;
 import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
 import org.e2immu.analyzer.modification.io.LoadAnalyzedPackageFiles;
 import org.e2immu.analyzer.modification.io.WriteAnalysis;
-import org.e2immu.analyzer.modification.prepwork.hct.ComputeHiddenContent;
-import org.e2immu.analyzer.modification.prepwork.hct.HiddenContentTypes;
+import org.e2immu.analyzer.modification.prepwork.PrepAnalyzer;
+import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeAnalysisOrder;
+import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeCallGraph;
 import org.e2immu.analyzer.run.config.Configuration;
 import org.e2immu.language.cst.api.info.Info;
 import org.e2immu.language.cst.api.info.TypeInfo;
 import org.e2immu.language.inspection.api.integration.JavaInspector;
+import org.e2immu.language.inspection.api.parser.ParseResult;
 import org.e2immu.language.inspection.api.parser.Summary;
 import org.e2immu.language.inspection.integration.JavaInspectorImpl;
 import org.e2immu.util.internal.util.Trie;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -81,19 +84,17 @@ public class RunAnalyzer implements Runnable {
             return;
         }
         boolean empty = analysisSteps.isEmpty();
-        if (empty || analysisSteps.contains("hc")) {
-            LOGGER.info("Computing hidden content for {} types", summary.types().size());
-            ComputeHiddenContent chc = new ComputeHiddenContent(javaInspector.runtime());
-            for (TypeInfo typeInfo : summary.types()) {
-                typeInfo.recursiveSubTypeStream().forEach(st -> {
-                    HiddenContentTypes stHct = chc.compute(st);
-                    st.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, stHct);
-                    st.constructorAndMethodStream().forEach(m -> {
-                        HiddenContentTypes mHct = chc.compute(stHct, m);
-                        m.analysis().set(HiddenContentTypes.HIDDEN_CONTENT_TYPES, mHct);
-                    });
-                });
-            }
+        if (empty || analysisSteps.contains("prep")) {
+            ParseResult parseResult = summary.parseResult();
+            Predicate<TypeInfo>externalsToAccept = t -> false;
+            LOGGER.info("Running prep analyzer on {} types", summary.types().size());
+            PrepAnalyzer prepAnalyzer = new PrepAnalyzer(javaInspector.runtime());
+            prepAnalyzer.initialize(javaInspector.compiledTypesManager().typesLoaded());
+            ComputeCallGraph ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
+                    externalsToAccept);
+            ComputeAnalysisOrder cao = new ComputeAnalysisOrder();
+            List<Info> order = cao.go(ccg.graph());
+            LOGGER.info("Call graph analysis order has size {}", order.size());
         }
 
         // write results
