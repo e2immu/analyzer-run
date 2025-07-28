@@ -7,6 +7,9 @@ import org.e2immu.analyzer.aapi.parser.Composer;
 import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
 import org.e2immu.analyzer.modification.io.LoadAnalyzedPackageFiles;
 import org.e2immu.analyzer.modification.io.WriteAnalysis;
+import org.e2immu.analyzer.modification.linkedvariables.Analyzer;
+import org.e2immu.analyzer.modification.linkedvariables.IteratingAnalyzer;
+import org.e2immu.analyzer.modification.linkedvariables.impl.IteratingAnalyzerImpl;
 import org.e2immu.analyzer.modification.prepwork.PrepAnalyzer;
 import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeAnalysisOrder;
 import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeCallGraph;
@@ -93,9 +96,20 @@ public class RunAnalyzer implements Runnable {
             ComputeCallGraph ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
                     externalsToAccept);
             ComputeAnalysisOrder cao = new ComputeAnalysisOrder();
+            LOGGER.info("Compute analysis order");
             List<Info> order = cao.go(ccg.graph());
             LOGGER.info("Call graph analysis order has size {}", order.size());
+
+            if(empty || analysisSteps.contains("modification")) {
+                IteratingAnalyzer.Configuration anaConfig = new IteratingAnalyzerImpl.ConfigurationBuilder()
+                        .setMaxIterations(20)
+                        .setCycleBreakingStrategy(Analyzer.CycleBreakingStrategy.NO_INFORMATION_IS_NON_MODIFYING)
+                        .build();
+                IteratingAnalyzer analyzer = new IteratingAnalyzerImpl(javaInspector.runtime(), anaConfig);
+                analyzer.analyze(order);
+            }
         }
+
 
         // write results
         String targetDir = configuration.generalConfiguration().analysisResultsDir();
