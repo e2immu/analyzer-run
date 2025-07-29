@@ -64,7 +64,7 @@ public class RunAnalyzer implements Runnable {
     private void runAnalyzer() throws IOException {
         ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)).setLevel(Level.INFO);
 
-        JavaInspector javaInspector = new JavaInspectorImpl();
+        JavaInspector javaInspector = new JavaInspectorImpl(true, true);
         javaInspector.initialize(configuration.inputConfiguration());
         AnnotatedAPIConfiguration ac = configuration.annotatedAPIConfiguration();
         new LoadAnalyzedPackageFiles().go(javaInspector, ac.analyzedAnnotatedApiDirs());
