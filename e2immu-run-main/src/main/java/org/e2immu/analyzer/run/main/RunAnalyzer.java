@@ -55,6 +55,11 @@ public class RunAnalyzer implements Runnable {
                 return;
             }
             runAnalyzer();
+        } catch (Summary.FailFastException ffe) {
+            Throwable cause = ffe.getCause();
+            while(cause.getCause() != null) { cause = cause.getCause(); }
+            LOGGER.error("Caught exception", cause);
+            exitValue = 1;
         } catch (IOException ioe) {
             LOGGER.error("Caught IO exception: {}", ioe.getMessage());
             exitValue = 1;
