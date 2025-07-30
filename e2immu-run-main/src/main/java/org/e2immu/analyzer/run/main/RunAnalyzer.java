@@ -96,7 +96,7 @@ public class RunAnalyzer implements Runnable {
             PrepAnalyzer prepAnalyzer = new PrepAnalyzer(javaInspector.runtime());
             prepAnalyzer.initialize(javaInspector.compiledTypesManager().typesLoaded());
             ComputeCallGraph ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
-                    externalsToAccept);
+                    externalsToAccept, parseOptions.parallel());
             ComputeAnalysisOrder cao = new ComputeAnalysisOrder();
             List<Info> order = cao.go(ccg.graph());
             LOGGER.info("Call graph analysis order has size {}", order.size());
