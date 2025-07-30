@@ -57,7 +57,9 @@ public class RunAnalyzer implements Runnable {
             runAnalyzer();
         } catch (Summary.FailFastException ffe) {
             Throwable cause = ffe.getCause();
-            while(cause.getCause() != null) { cause = cause.getCause(); }
+            while (cause.getCause() != null) {
+                cause = cause.getCause();
+            }
             LOGGER.error("Caught exception", cause);
             exitValue = 1;
         } catch (IOException ioe) {
@@ -89,16 +91,23 @@ public class RunAnalyzer implements Runnable {
             return;
         }
         boolean empty = analysisSteps.isEmpty();
+        ComputeCallGraph ccg;
         if (empty || analysisSteps.contains("prep")) {
             ParseResult parseResult = summary.parseResult();
-            Predicate<TypeInfo>externalsToAccept = t -> false;
+            Predicate<TypeInfo> externalsToAccept = t -> false;
             LOGGER.info("Running prep analyzer on {} types", summary.types().size());
             PrepAnalyzer prepAnalyzer = new PrepAnalyzer(javaInspector.runtime());
             prepAnalyzer.initialize(javaInspector.compiledTypesManager().typesLoaded());
-            ComputeCallGraph ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
+            ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
                     externalsToAccept, parseOptions.parallel());
+
+        } else {
+            ccg = null;
+        }
+        if (analysisSteps.contains("modification")) {
             ComputeAnalysisOrder cao = new ComputeAnalysisOrder();
-            List<Info> order = cao.go(ccg.graph());
+            LOGGER.info("Computing analysis order");
+            List<Info> order = cao.go(ccg.graph(), parseOptions.parallel());
             LOGGER.info("Call graph analysis order has size {}", order.size());
         }
 
