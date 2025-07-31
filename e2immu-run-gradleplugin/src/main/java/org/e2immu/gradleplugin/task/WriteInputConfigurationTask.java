@@ -22,7 +22,7 @@ import static org.e2immu.gradleplugin.AnalyzerPropertyComputer.E2IMMU_CONFIGURAT
 
 @CacheableTask
 public class WriteInputConfigurationTask extends ConventionTask {
-    private static final Logger LOGGER = Logging.getLogger(AnalyzerTask.class);
+    private static final Logger LOGGER = Logging.getLogger(WriteInputConfigurationTask.class);
     private Map<String, String> analyserProperties;
 
     @TaskAction

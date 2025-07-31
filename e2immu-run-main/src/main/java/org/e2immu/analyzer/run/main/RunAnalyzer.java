@@ -101,7 +101,8 @@ public class RunAnalyzer implements Runnable {
         }
         ComputeCallGraph ccg;
         boolean modification = analysisSteps.contains(Main.AS_MODIFICATION);
-        boolean prep = modification || analysisSteps.contains(Main.AS_PREP);
+        boolean rewireTests = analysisSteps.contains(Main.AS_REWIRE_TESTS);
+        boolean prep = modification || rewireTests || analysisSteps.contains(Main.AS_PREP);
         if (prep) {
             ParseResult parseResult = summary.parseResult();
             Predicate<TypeInfo> externalsToAccept = t -> false;
@@ -112,6 +113,14 @@ public class RunAnalyzer implements Runnable {
                     externalsToAccept, parseOptions.parallel());
             if (printMemory) {
                 printMemUse();
+            }
+            if (rewireTests) {
+                LOGGER.info("Start rewire tests");
+                new RunRewireTests(configuration.inputConfiguration(), javaInspector, summary.parseResult(), ccg.graph())
+                        .go();
+                if (printMemory) {
+                    printMemUse();
+                }
             }
         } else {
             ccg = null;

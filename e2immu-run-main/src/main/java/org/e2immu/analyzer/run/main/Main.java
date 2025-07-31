@@ -29,9 +29,6 @@ public class Main {
     public static final int EXIT_IO_EXCEPTION = 4;
     public static final int EXIT_ANALYSER_ERROR = 5; // analyser found errors
 
-    public static final String ACTION = "action";
-    public static final String ACTION_PARAMETER = "action-parameter";
-
     public static final String HELP = "help";
 
     public static final String JRE = "jre";
@@ -43,8 +40,8 @@ public class Main {
 
     public static final String AS_NONE = "none";
     public static final String AS_PREP = "prep";
-    public static final String AS_ANALYSIS_ORDER = "analysis-order";
     public static final String AS_MODIFICATION = "modification";
+    public static final String AS_REWIRE_TESTS = "rewire-tests";
 
     public static final String ANALYSIS_RESULTS_DIR = "analysis-results-dir";
     public static final String DEBUG = "debug";
@@ -107,12 +104,8 @@ public class Main {
         CommandLineParser commandLineParser = new DefaultParser();
         Options options = createOptions();
         CommandLine cmd = commandLineParser.parse(options, args);
-        String action = cmd.getOptionValue(ACTION);
         Configuration configuration = parseConfiguration(cmd, options);
-        if (action != null) {
-            String[] actionParameters = cmd.getOptionValues(ACTION_PARAMETER);
-            return ExecuteAction.run(action, actionParameters, configuration);
-        }
+
         // the following will be output if the CONFIGURATION logger is active!
         LOGGER.debug("Configuration:\n{}", configuration);
         RunAnalyzer runAnalyser = new RunAnalyzer(configuration);
@@ -146,7 +139,7 @@ public class Main {
         GeneralConfiguration generalConfiguration = parseGeneralConfiguration(cmd);
         builder.setGeneralConfiguration(generalConfiguration);
 
-        InputConfiguration inputConfiguration = parseInputConfiguration(cmd, generalConfiguration);
+        InputConfiguration inputConfiguration = parseInputConfiguration(cmd);
         builder.setInputConfiguration(inputConfiguration);
 
         AnnotatedAPIConfiguration annotatedAPIConfiguration = parseAnnotatedAPIConfiguration(cmd);
@@ -162,7 +155,7 @@ public class Main {
 
         GeneralConfiguration generalConfiguration = generalConfiguration(kvMap);
         builder.setGeneralConfiguration(generalConfiguration);
-        builder.setInputConfiguration(inputConfiguration(kvMap, generalConfiguration));
+        builder.setInputConfiguration(inputConfiguration(kvMap));
         builder.setAnnotatedAPIConfiguration(annotatedAPIConfiguration(kvMap));
 
         builder.setLanguageConfiguration(new LanguageConfigurationImpl(true));
@@ -273,7 +266,7 @@ public class Main {
                 .desc("Jar names to be excluded from the classpath, to give priority to others").build());
     }
 
-    private static InputConfiguration inputConfiguration(Map<String, String> kvMap, GeneralConfiguration generalConfiguration) {
+    private static InputConfiguration inputConfiguration(Map<String, String> kvMap) {
         String dependencies = kvMap.getOrDefault(DEPENDENCIES, "");
         String excludeFromClasspath = kvMap.getOrDefault(EXCLUDE_FROM_CLASSPATH, "");
 
@@ -293,20 +286,10 @@ public class Main {
         setSplitStringProperty(kvMap, File.pathSeparator, RUNTIME_CLASSPATH, builder::addRuntimeClassPath);
         setSplitStringProperty(kvMap, File.pathSeparator, TESTS_RUNTIME_CLASSPATH, builder::addTestRuntimeClassPath);
 
-        // setSplitStringProperty(kvMap, File.pathSeparator, DEPENDENCIES, builder::addDependencies);
-        // setSplitStringProperty(kvMap, File.pathSeparator, EXCLUDE_FROM_CLASSPATH, builder::addExcludeFromClasspath);
-
-        copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
     }
 
-    private static void copyFromGeneralConfiguration(GeneralConfiguration generalConfiguration, InputConfigurationImpl.Builder builder) {
-        if (generalConfiguration.debugTargets().contains("classpath")) {
-            //   builder.setInfoLogClasspath(true);
-        }
-    }
-
-    private static InputConfiguration parseInputConfiguration(CommandLine cmd, GeneralConfiguration generalConfiguration) throws IOException {
+    private static InputConfiguration parseInputConfiguration(CommandLine cmd) throws IOException {
         String inputConfigurationFile = cmd.getOptionValue(INPUT_CONFIGURATION);
         if (inputConfigurationFile != null) {
             ObjectMapper objectMapper = JsonStreaming.objectMapper();
@@ -337,7 +320,6 @@ public class Main {
         String[] restrictTestSourceToPackages = cmd.getOptionValues(TEST_SOURCE_PACKAGES);
         splitAndAdd(restrictTestSourceToPackages, COMMA, builder::addRestrictTestSourceToPackages);
 
-        copyFromGeneralConfiguration(generalConfiguration, builder);
         return builder.build();
     }
 
