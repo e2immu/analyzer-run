@@ -84,6 +84,13 @@ dependencies {
 
 application {
     mainClass = "org.e2immu.analyzer.run.main.Main"
+ //   applicationDefaultJvmArgs = listOf("-enableassertions", "-Xmx24G")
+}
+
+run {
+    if(project.hasProperty("jvmArgs")) {
+        application.applicationDefaultJvmArgs = (project.property("jvmArgs") as String).split("\\s+")
+    }
 }
 
 tasks.test {
