@@ -24,11 +24,12 @@ public class RunRewireTests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RunRewireTests.class);
     private static final int ITERATIONS = 3;
+    public static final long SEED = 192L;
 
     private final InputConfiguration inputConfiguration;
     private final JavaInspector javaInspector;
     private final ParseResult parseResult;
-    private final G<TypeInfo> primaryTypeUseGraph;
+    private final G<Info> initialGraph;
 
     public RunRewireTests(InputConfiguration inputConfiguration,
                           JavaInspector javaInspector,
@@ -37,19 +38,15 @@ public class RunRewireTests {
         this.inputConfiguration = inputConfiguration;
         this.javaInspector = javaInspector;
         this.parseResult = parseResult;
-        G.Builder<TypeInfo> typeUseBuilder = new G.Builder<>(Long::sum);
-        graph.edgeStream().forEach(e -> {
-            TypeInfo ptFrom = e.from().t().typeInfo().primaryType();
-            TypeInfo ptTo = e.to().t().typeInfo().primaryType();
-            if (ptFrom != ptTo) typeUseBuilder.mergeEdge(ptTo, ptFrom, 1L);
-        });
-        primaryTypeUseGraph = typeUseBuilder.build();
+        this.initialGraph = graph;
     }
 
     public void go() {
-        Random random = new Random(12L);
+        Random random = new Random(SEED);
         List<TypeInfo> list = parseResult.primaryTypes().stream().sorted(Comparator.comparing(TypeInfo::fullyQualifiedName)).toList();
+        G<Info> infoGraph = initialGraph;
         for (int i = 0; i < ITERATIONS; ++i) {
+            G<TypeInfo> primaryTypeUseGraph = primaryTypeUseGraph(infoGraph);
             TypeInfo pt = list.get(random.nextInt(list.size()));
             Path path = Path.of(pt.compilationUnit().uri().getSchemeSpecificPart());
             Path absolutePath = path.toAbsolutePath();
@@ -64,13 +61,11 @@ public class RunRewireTests {
                     if (!stop) {
                         LOGGER.info("Calling javaInspector.reloadSources");
                         JavaInspector.ReloadResult rr = javaInspector.reloadSources(inputConfiguration, Map.of());
-                        assert rr.sourceHasChanged().size() == 1;
-                        TypeInfo sourceHasChanged = rr.sourceHasChanged().stream().findFirst().orElseThrow();
-                        assert sourceHasChanged.equals(pt);
-                        Set<TypeInfo> dependentPrimaryTypes = dependent(pt);
+                        assert rr.sourceHasChanged().contains(pt);
+                        Set<TypeInfo> dependentPrimaryTypes = dependent(primaryTypeUseGraph, rr.sourceHasChanged());
                         LOGGER.info("{} has {} dependent types", pt, dependentPrimaryTypes.size());
                         JavaInspector.Invalidated invalidated = ti -> {
-                            if (ti == pt) return INVALID;
+                            if (rr.sourceHasChanged().contains(ti)) return INVALID;
                             if (dependentPrimaryTypes.contains(ti)) return REWIRE;
                             return UNCHANGED;
                         };
@@ -94,8 +89,20 @@ public class RunRewireTests {
         }
     }
 
-    private Set<TypeInfo> dependent(TypeInfo pt) {
-        return Common.follow(primaryTypeUseGraph, new V<>(pt)).stream().map(V::t).collect(Collectors.toUnmodifiableSet());
+    private static G<TypeInfo> primaryTypeUseGraph(G<Info> infoGraph) {
+        G.Builder<TypeInfo> typeUseBuilder = new G.Builder<>(Long::sum);
+        infoGraph.edgeStream().forEach(e -> {
+            TypeInfo ptFrom = e.from().t().typeInfo().primaryType();
+            TypeInfo ptTo = e.to().t().typeInfo().primaryType();
+            if (ptFrom != ptTo) typeUseBuilder.mergeEdge(ptTo, ptFrom, 1L);
+        });
+        return typeUseBuilder.build();
+    }
+
+    private static Set<TypeInfo> dependent(G<TypeInfo> primaryTypeUseGraph, Set<TypeInfo> pts) {
+        List<V<TypeInfo>> list = pts.stream().map(V::new).toList();
+        return Common.follow(primaryTypeUseGraph, list, false)
+                .stream().map(V::t).collect(Collectors.toUnmodifiableSet());
     }
 
     private static boolean write(Path path, String content) {
