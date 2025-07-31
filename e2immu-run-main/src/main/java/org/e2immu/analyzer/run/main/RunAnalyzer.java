@@ -7,6 +7,8 @@ import org.e2immu.analyzer.aapi.parser.Composer;
 import org.e2immu.analyzer.modification.common.defaults.ShallowAnalyzer;
 import org.e2immu.analyzer.modification.io.LoadAnalyzedPackageFiles;
 import org.e2immu.analyzer.modification.io.WriteAnalysis;
+import org.e2immu.analyzer.modification.linkedvariables.IteratingAnalyzer;
+import org.e2immu.analyzer.modification.linkedvariables.impl.IteratingAnalyzerImpl;
 import org.e2immu.analyzer.modification.prepwork.PrepAnalyzer;
 import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeAnalysisOrder;
 import org.e2immu.analyzer.modification.prepwork.callgraph.ComputeCallGraph;
@@ -22,6 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -82,6 +87,10 @@ public class RunAnalyzer implements Runnable {
                 .setParallel(configuration.generalConfiguration().parallel())
                 .build();
         Summary summary = javaInspector.parse(parseOptions);
+        boolean printMemory = configuration.generalConfiguration().debugTargets().contains("memory");
+        if (printMemory) {
+            printMemUse();
+        }
         if (summary.haveErrors()) {
             LOGGER.error("Have parsing errors, bailing out");
             return;
@@ -90,9 +99,10 @@ public class RunAnalyzer implements Runnable {
         if (analysisSteps.size() == 1 && Main.AS_NONE.equalsIgnoreCase(analysisSteps.getFirst())) {
             return;
         }
-        boolean empty = analysisSteps.isEmpty();
         ComputeCallGraph ccg;
-        if (empty || analysisSteps.contains("prep")) {
+        boolean modification = analysisSteps.contains(Main.AS_MODIFICATION);
+        boolean prep = modification || analysisSteps.contains(Main.AS_PREP);
+        if (prep) {
             ParseResult parseResult = summary.parseResult();
             Predicate<TypeInfo> externalsToAccept = t -> false;
             LOGGER.info("Running prep analyzer on {} types", summary.types().size());
@@ -100,28 +110,49 @@ public class RunAnalyzer implements Runnable {
             prepAnalyzer.initialize(javaInspector.compiledTypesManager().typesLoaded());
             ccg = prepAnalyzer.doPrimaryTypesReturnComputeCallGraph(Set.copyOf(parseResult.primaryTypes()),
                     externalsToAccept, parseOptions.parallel());
-
+            if (printMemory) {
+                printMemUse();
+            }
         } else {
             ccg = null;
         }
-        if (analysisSteps.contains("modification")) {
+        if (modification) {
+            assert ccg != null;
             ComputeAnalysisOrder cao = new ComputeAnalysisOrder();
             LOGGER.info("Computing analysis order");
             List<Info> order = cao.go(ccg.graph(), parseOptions.parallel());
-            LOGGER.info("Call graph analysis order has size {}", order.size());
-        }
+            LOGGER.info("Call graph analysis order has size {}; start modification analysis", order.size());
 
-        // write results
-        String targetDir = configuration.generalConfiguration().analysisResultsDir();
-        if (targetDir != null && !Main.AS_NONE.equalsIgnoreCase(targetDir)) {
-            Trie<TypeInfo> trie = new Trie<>();
-            LOGGER.info("Writing results for {} types to {}", summary.types().size(), targetDir);
-            summary.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
-            WriteAnalysis writeAnalysis = new WriteAnalysis(javaInspector.runtime());
-            writeAnalysis.write(targetDir, trie);
-        } else {
-            LOGGER.warn("Not writing out results, " + Main.ANALYSIS_RESULTS_DIR + " is empty");
+            // do actual modification analysis
+            IteratingAnalyzer.Configuration modConfig = new IteratingAnalyzerImpl.ConfigurationBuilder()
+                    .setStoreErrors(false)
+                    .build();
+            IteratingAnalyzer analyzer = new IteratingAnalyzerImpl(javaInspector.runtime(), modConfig);
+            analyzer.analyze(order);
+
+            // write results
+            String targetDir = configuration.generalConfiguration().analysisResultsDir();
+            if (targetDir != null && !Main.AS_NONE.equalsIgnoreCase(targetDir)) {
+                Trie<TypeInfo> trie = new Trie<>();
+                LOGGER.info("Writing results for {} types to {}", summary.types().size(), targetDir);
+                summary.types().forEach(ti -> trie.add(ti.packageName().split("\\."), ti));
+                WriteAnalysis writeAnalysis = new WriteAnalysis(javaInspector.runtime());
+                writeAnalysis.write(targetDir, trie);
+            } else {
+                LOGGER.warn("Not writing out results, " + Main.ANALYSIS_RESULTS_DIR + " is empty");
+            }
         }
+    }
+
+    private static final int MB = 1024 * 1024;
+
+    private void printMemUse() {
+        System.gc();
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
+
+        LOGGER.info("Heap Memory Usage: {} MB initial, {} MB used, {} MB committed, {} MB max",
+                heapUsage.getInit() / MB, heapUsage.getUsed() / MB, heapUsage.getCommitted() / MB, heapUsage.getMax() / MB);
     }
 
     private void runShallowAnalyzer() throws IOException {
