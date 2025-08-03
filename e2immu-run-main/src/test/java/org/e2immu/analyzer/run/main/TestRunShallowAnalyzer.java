@@ -40,7 +40,7 @@ public class TestRunShallowAnalyzer {
         }
         Main.main(new String[]{
                 "--debug=classpath",
-                "--classpath=" + String.join(":", InputConfigurationImpl.GRADLE_DEFAULT),
+                "--classpath=" + String.join(":", InputConfigurationImpl.DEFAULT_MODULES),
                 "--classpath=" + String.join(":", ToolChain.CLASSPATH_SLF4J_LOGBACK),
                 "--source=" + aapiSources.getPath(),
                 "--source-packages=org.e2immu.analyzer.shallow.aapi.log",

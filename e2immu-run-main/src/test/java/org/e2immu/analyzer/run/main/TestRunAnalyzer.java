@@ -30,7 +30,7 @@ public class TestRunAnalyzer {
 
         Main.main(new String[]{
                 "--debug=classpath",
-                "--classpath=" + String.join(":", InputConfigurationImpl.GRADLE_DEFAULT),
+                "--classpath=" + String.join(":", InputConfigurationImpl.DEFAULT_MODULES),
                 "--classpath=" + String.join(":", ToolChain.CLASSPATH_JUNIT),
                 "--classpath=" + String.join(":", ToolChain.CLASSPATH_SLF4J_LOGBACK),
                 "--source=" + sourceDir.getPath(),

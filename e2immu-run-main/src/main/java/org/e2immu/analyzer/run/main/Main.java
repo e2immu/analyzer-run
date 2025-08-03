@@ -250,7 +250,7 @@ public class Main {
         options.addOption(Option.builder("cp").longOpt(CLASSPATH).hasArg().argName("CLASSPATH")
                 .desc("Add classpath components, separated by the Java path separator '"
                       + File.pathSeparator + "'. Default, when this option is absent, is '"
-                      + Arrays.toString(InputConfigurationImpl.GRADLE_DEFAULT) + "'.").build());
+                      + Arrays.toString(InputConfigurationImpl.DEFAULT_MODULES) + "'.").build());
 
         options.addOption(Option.builder().longOpt(SOURCE_PACKAGES).hasArg().argName("PACKAGES")
                 .desc("Restrict the sources parsed to the paths" +

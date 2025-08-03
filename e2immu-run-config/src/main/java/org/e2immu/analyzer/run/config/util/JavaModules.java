@@ -57,8 +57,16 @@ public class JavaModules {
                  "java.logging", "java.management", "java.naming", "java.net.http", "java.prefs", "java.rmi",
                  "java.scripting", "java.security.jgss", "java.security.sasl", "java.smartcardio",
                  "java.transaction.xa", "java.xml",
+                 "jdk.jfr",
                  "jdk.unsupported" -> Set.of("java.base");
-            default -> throw new UnsupportedOperationException("Implement: " + jmod);
+            case "jdk.accessibility" -> Set.of("java.desktop");
+            case "jdk.attach" -> Set.of("jdk.internal.jvmstat");
+            default -> {
+                if (jmod.startsWith("java.")) {
+                    throw new UnsupportedOperationException("Implement: " + jmod + ". We should know the dependencies of all java.* modules");
+                }
+                yield Set.of("java.base");
+            }
         };
     }
 }
